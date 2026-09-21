@@ -1,42 +1,67 @@
 ; ==========================================
-; 基本資訊與安裝設定
+; DropShelf - Inno Setup 打包腳本
 ; ==========================================
+
+#define MyAppName "DropShelf"
+#define MyAppVersion "1.0.1"
+#define MyAppPublisher "ais7896-hue"
+#define MyAppURL "https://github.com/ais7896-hue/DropShelf"
+#define MyAppExeName "DropShelf.exe"
+
 [Setup]
-; 應用程式名稱與版本
-AppName=DropShelf 置物架
-AppVersion=1.0.0
-AppPublisher=Personal Studio
-; 預設安裝目錄：{autopf} 會自動根據系統判定 Program Files 或使用者目錄
-DefaultDirName={autopf}\DropShelf
-; 開始功能表資料夾名稱
-DefaultGroupName=DropShelf
-; 安裝檔輸出目錄與檔名
+; 應用程式基本資訊
+AppId={{8E3C1B20-5A2C-497B-864D-0D8B6E3210F8}
+AppName={#MyAppName}
+AppVersion={#MyAppVersion}
+AppPublisher={#MyAppPublisher}
+AppPublisherURL={#MyAppURL}
+AppSupportURL={#MyAppURL}
+AppUpdatesURL={#MyAppURL}/releases
+
+; 預設安裝目錄：{autopf} 會自動根據系統判定 Program Files 或使用者 AppData
+DefaultDirName={autopf}\{#MyAppName}
+DefaultGroupName={#MyAppName}
+
+; 限制與支援純 64 位元環境安裝
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+
+; 授權協議檔案（安裝精靈會顯示條款內容）
+LicenseFile=LICENSE
+
+; 輸出設定
 OutputDir=Output
-OutputBaseFilename=DropShelf_Setup_v1.0
-; 壓縮方式（lzma2 壓縮率極高）
+OutputBaseFilename=DropShelf_Setup_v{#MyAppVersion}
+SetupIconFile=icon.ico
+UninstallDisplayIcon={app}\{#MyAppExeName}
+
+; 壓縮方式（lzma2 具備極佳壓縮率與解壓效能）
 Compression=lzma2/ultra64
 SolidCompression=yes
-; 安裝檔與反安裝的圖示
-SetupIconFile=icon.ico
-UninstallDisplayIcon={app}\DropShelf.exe
-; 關閉必須管理員權限的強制要求（允許一般使用者目錄安裝，體驗更佳）
+
+; 權限設定：允許一般使用者安裝至個人目錄，亦可提權至全機安裝
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
+
+; 安裝與更新時自動偵測並關閉正在背景常駐的 DropShelf，避免檔案被佔用
+CloseApplications=yes
+CloseApplicationsFilter=*.exe
+
 [Languages]
 Name: "chinesetrad"; MessagesFile: "compiler:Languages\ChineseTraditional.isl"
-; ==========================================
-; 安裝過程中讓使用者勾選的項目
-; ==========================================
-[Tasks]
-Name: "desktopicon"; Description: "建立桌面捷徑"; GroupDescription: "額外圖示:"
-Name: "startup"; Description: "開機時自動啟動置物架"; GroupDescription: "開機設定:"
 
 ; ==========================================
-; 要打包進安裝包的檔案
+; 安裝自訂選項
+; ==========================================
+[Tasks]
+Name: "desktopicon"; Description: "建立桌面捷徑"; GroupDescription: "額外捷徑:"
+Name: "startup"; Description: "開機時自動啟動置物架（常駐系統匣）"; GroupDescription: "啟動設定:"
+
+; ==========================================
+; 要打包進安裝包的檔案清單
 ; ==========================================
 [Files]
-; 來源指向 PyInstaller 產生的 dist\DropShelf 目錄
-; 請確保本 .iss 檔案位於與 dist 資料夾相同的專案根目錄下
+; 來源為 PyInstaller 打包產出的 dist\DropShelf 目錄
 Source: "dist\DropShelf\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; ==========================================
@@ -44,16 +69,15 @@ Source: "dist\DropShelf\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdir
 ; ==========================================
 [Icons]
 ; 開始功能表捷徑
-Name: "{group}\DropShelf"; Filename: "{app}\DropShelf.exe"
-Name: "{group}\解除安裝 DropShelf"; Filename: "{uninstallexe}"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{group}\解除安裝 {#MyAppName}"; Filename: "{uninstallexe}"
 ; 桌面捷徑（由使用者勾選決定）
-Name: "{autodesktop}\DropShelf"; Filename: "{app}\DropShelf.exe"; Tasks: desktopicon
-; 開機自動啟動捷徑（由使用者勾選決定，放入使用者的 Startup 目錄）
-Name: "{userstartup}\DropShelf"; Filename: "{app}\DropShelf.exe"; Tasks: startup
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+; 開機自動啟動捷徑（由使用者勾選決定，放入 Startup 目錄）
+Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: startup
 
 ; ==========================================
-; 安裝完成後的動作
+; 安裝完成後動作
 ; ==========================================
 [Run]
-; 提示是否立即啟動程式
-Filename: "{app}\DropShelf.exe"; Description: "立即啟動 DropShelf"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "立即啟動 {#MyAppName}"; Flags: nowait postinstall skipifsilent
