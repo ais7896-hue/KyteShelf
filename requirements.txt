@@ -1,0 +1,11 @@
+# GUI 核心庫
+PySide6>=6.5.0
+
+# 全域滑鼠與鍵盤監聽（晃動觸發置物架）
+pynput>=1.7.6
+
+# Windows COM 元件支援（Outlook 附件自動匯入）
+pywin32>=306
+
+# 打包工具
+pyinstaller>=6.0.0
