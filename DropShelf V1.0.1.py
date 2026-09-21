@@ -4,6 +4,7 @@ import subprocess
 import time
 import zipfile
 import tempfile
+import json
 from collections import deque
 from pathlib import Path
 
@@ -25,7 +26,9 @@ from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
     QListWidget, QListWidgetItem, QLabel, QPushButton, 
     QFileIconProvider, QGraphicsDropShadowEffect, QMenu,
-    QFileDialog, QMessageBox, QSystemTrayIcon, QStyle
+    QFileDialog, QMessageBox, QSystemTrayIcon, QStyle,
+    QDialog, QSlider, QCheckBox, QColorDialog, QLineEdit,
+    QComboBox, QFrame
 )
 from pynput import mouse, keyboard
 
@@ -38,15 +41,122 @@ class TriggerSignals(QObject):
 
 
 # ==========================================
-# 2. 全域輸入監聽器（晃動演算法 + 快捷鍵備援）
+# 2. 設定檔管理器 (ConfigManager)
+# ==========================================
+class ConfigManager(QObject):
+    config_changed = Signal(dict)
+
+    DEFAULT_CONFIG = {
+        "shake_enabled": True,
+        "shake_sensitivity": 3,
+        "hotkey": "<ctrl>+`",
+        "hotkey_display": "Ctrl + `",
+        "theme_color": "#0284C7"
+    }
+
+    def __init__(self):
+        super().__init__()
+        self.config = self.DEFAULT_CONFIG.copy()
+        self.config_file = self._get_config_path()
+        self.config = self.load_config()
+
+    def _get_config_path(self):
+        try:
+            local_dir = Path(__file__).resolve().parent
+            local_cfg = local_dir / "config.json"
+            if local_cfg.exists():
+                return local_cfg
+            # 測試寫入權限
+            with open(local_cfg, "w", encoding="utf-8") as f:
+                json.dump(self.DEFAULT_CONFIG, f, indent=4, ensure_ascii=False)
+            return local_cfg
+        except Exception:
+            appdata = Path(os.environ.get("APPDATA", Path.home())) / "DropShelf"
+            appdata.mkdir(parents=True, exist_ok=True)
+            return appdata / "config.json"
+
+    def load_config(self):
+        cfg = self.DEFAULT_CONFIG.copy()
+        if self.config_file.exists():
+            try:
+                if self.config_file.stat().st_size > 0:
+                    with open(self.config_file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        cfg.update(data)
+                else:
+                    self.save_config(cfg)
+            except Exception as e:
+                print(f"讀取設定檔失敗: {e}")
+        else:
+            self.save_config(cfg)
+        return cfg
+
+    def save_config(self, new_config):
+        self.config.update(new_config)
+        try:
+            with open(self.config_file, "w", encoding="utf-8") as f:
+                json.dump(self.config, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            print(f"儲存設定檔失敗: {e}")
+        self.config_changed.emit(self.config)
+
+
+# ==========================================
+# 3. 全域輸入監聽器（支援動態靈敏度與熱鍵更新）
 # ==========================================
 class GlobalInputMonitor:
-    def __init__(self, signals: TriggerSignals):
+    def __init__(self, signals: TriggerSignals, config_manager: ConfigManager):
         self.signals = signals
+        self.config_manager = config_manager
         self.is_left_pressed = False
         self.history = deque(maxlen=20)
         self.last_trigger_time = 0
         self.current_cursor = (300, 300)
+
+        self.mouse_listener = None
+        self.hotkey_listener = None
+        self.current_hotkey_str = ""
+
+        self.apply_config(self.config_manager.config)
+        self.config_manager.config_changed.connect(self.apply_config)
+
+    def apply_config(self, config):
+        self.shake_enabled = config.get("shake_enabled", True)
+        sens = config.get("shake_sensitivity", 3)
+        # 靈敏度等級映射 (min_dx, reversals, time_window)
+        sens_map = {
+            1: (18, 3, 0.40),  # 偏鈍（防誤觸）
+            2: (14, 2, 0.42),  # 略鈍
+            3: (10, 2, 0.45),  # 標準（預設）
+            4: (8, 2, 0.50),   # 靈敏
+            5: (5, 2, 0.55),   # 極靈敏
+        }
+        self.min_dx, self.reversals_needed, self.time_window = sens_map.get(sens, (10, 2, 0.45))
+
+        new_hotkey = config.get("hotkey", "<ctrl>+`")
+        if new_hotkey != self.current_hotkey_str:
+            self.restart_hotkey_listener(new_hotkey)
+
+    def restart_hotkey_listener(self, hotkey_str):
+        if self.hotkey_listener:
+            try:
+                self.hotkey_listener.stop()
+            except Exception:
+                pass
+            self.hotkey_listener = None
+
+        self.current_hotkey_str = hotkey_str
+        if not hotkey_str:
+            return
+
+        try:
+            self.hotkey_listener = keyboard.GlobalHotKeys({
+                hotkey_str: self.trigger_by_hotkey
+            })
+            self.hotkey_listener.daemon = True
+            self.hotkey_listener.start()
+        except Exception as e:
+            print(f"註冊全域快捷鍵 '{hotkey_str}' 失敗: {e}")
 
     def on_click(self, x, y, button, pressed):
         self.current_cursor = (int(x), int(y))
@@ -57,7 +167,7 @@ class GlobalInputMonitor:
 
     def on_move(self, x, y):
         self.current_cursor = (int(x), int(y))
-        if not self.is_left_pressed:
+        if not self.is_left_pressed or not self.shake_enabled:
             return
 
         now = time.time()
@@ -65,7 +175,7 @@ class GlobalInputMonitor:
             return
 
         self.history.append((x, now))
-        recent = [p for p in self.history if now - p[1] <= 0.45]
+        recent = [p for p in self.history if now - p[1] <= self.time_window]
         if len(recent) < 4:
             return
 
@@ -73,13 +183,13 @@ class GlobalInputMonitor:
         last_dir = 0
         for i in range(1, len(recent)):
             dx = recent[i][0] - recent[i-1][0]
-            if abs(dx) > 10:
+            if abs(dx) > self.min_dx:
                 cur_dir = 1 if dx > 0 else -1
                 if last_dir != 0 and cur_dir != last_dir:
                     reversals += 1
                 last_dir = cur_dir
 
-        if reversals >= 2:
+        if reversals >= self.reversals_needed:
             self.last_trigger_time = now
             self.history.clear()
             self.signals.show_shelf.emit(int(x), int(y))
@@ -96,11 +206,595 @@ class GlobalInputMonitor:
         self.mouse_listener.daemon = True
         self.mouse_listener.start()
 
-        self.hotkey_listener = keyboard.GlobalHotKeys({
-            '<ctrl>+`': self.trigger_by_hotkey
-        })
-        self.hotkey_listener.daemon = True
-        self.hotkey_listener.start()
+        self.restart_hotkey_listener(self.current_hotkey_str)
+
+
+# ==========================================
+# 4. 熱鍵錄製與設定面板元件
+# ==========================================
+class HotkeyRecorderEdit(QLineEdit):
+    hotkey_captured = Signal(str, str)  # (pynput_format, display_format)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setReadOnly(True)
+        self.is_recording = False
+        self.pynput_format = "<ctrl>+`"
+        self.display_format = "Ctrl + `"
+        self.setText(self.display_format)
+        self.setAlignment(Qt.AlignCenter)
+        self.setCursor(Qt.PointingHandCursor)
+        self.setToolTip("點擊以錄製快捷鍵，按下 Esc 取消")
+        self.setFixedHeight(34)
+        self.apply_normal_style()
+
+    def apply_normal_style(self):
+        self.setStyleSheet("""
+            QLineEdit {
+                background-color: #F8FAFC;
+                border: 1px solid #CBD5E1;
+                border-radius: 6px;
+                padding: 0px 10px;
+                font-size: 13px;
+                font-weight: 600;
+                color: #0F172A;
+                min-height: 32px;
+            }
+            QLineEdit:hover {
+                border-color: #94A3B8;
+                background-color: #F1F5F9;
+            }
+        """)
+
+    def set_hotkey(self, pynput_str, display_str):
+        self.pynput_format = pynput_str
+        self.display_format = display_str
+        self.setText(display_str)
+
+    def mousePressEvent(self, event):
+        self.start_recording()
+        super().mousePressEvent(event)
+
+    def start_recording(self):
+        self.is_recording = True
+        self.setText("請按下組合鍵（Esc 取消）...")
+        self.setStyleSheet("""
+            QLineEdit {
+                background-color: #EFF6FF;
+                border: 2px solid #2563EB;
+                border-radius: 6px;
+                padding: 0px 10px;
+                font-size: 13px;
+                font-weight: 700;
+                color: #1D4ED8;
+                min-height: 32px;
+            }
+        """)
+
+    def stop_recording(self):
+        self.is_recording = False
+        self.setText(self.display_format)
+        self.apply_normal_style()
+
+    def keyPressEvent(self, event):
+        if not self.is_recording:
+            super().keyPressEvent(event)
+            return
+
+        key = event.key()
+        modifiers = event.modifiers()
+
+        if key == Qt.Key_Escape:
+            self.stop_recording()
+            return
+
+        # 忽略單獨按修飾鍵
+        if key in (Qt.Key_Control, Qt.Key_Shift, Qt.Key_Alt, Qt.Key_Meta):
+            return
+
+        parts = []
+        pynput_parts = []
+
+        if modifiers & Qt.ControlModifier:
+            parts.append("Ctrl")
+            pynput_parts.append("<ctrl>")
+        if modifiers & Qt.AltModifier:
+            parts.append("Alt")
+            pynput_parts.append("<alt>")
+        if modifiers & Qt.ShiftModifier:
+            parts.append("Shift")
+            pynput_parts.append("<shift>")
+        if modifiers & Qt.MetaModifier:
+            parts.append("Win")
+            pynput_parts.append("<cmd>")
+
+        key_name = ""
+        pynput_key = ""
+
+        if key == Qt.Key_QuoteLeft:
+            key_name = "`"
+            pynput_key = "`"
+        elif key == Qt.Key_AsciiTilde:
+            key_name = "~"
+            pynput_key = "~"
+        elif key == Qt.Key_Space:
+            key_name = "Space"
+            pynput_key = "<space>"
+        elif Qt.Key_A <= key <= Qt.Key_Z:
+            char = chr(key).upper()
+            key_name = char
+            pynput_key = char.lower()
+        elif Qt.Key_0 <= key <= Qt.Key_9:
+            char = chr(key)
+            key_name = char
+            pynput_key = char
+        elif Qt.Key_F1 <= key <= Qt.Key_F12:
+            num = key - Qt.Key_F1 + 1
+            key_name = f"F{num}"
+            pynput_key = f"<f{num}>"
+        else:
+            txt = event.text()
+            if txt and txt.isprintable():
+                key_name = txt.upper()
+                pynput_key = txt.lower()
+
+        if not key_name:
+            return
+
+        parts.append(key_name)
+        pynput_parts.append(pynput_key)
+
+        display_str = " + ".join(parts)
+        pynput_str = "+".join(pynput_parts)
+
+        self.pynput_format = pynput_str
+        self.display_format = display_str
+        self.stop_recording()
+        self.hotkey_captured.emit(self.pynput_format, self.display_format)
+
+
+class SettingsDialog(QDialog):
+    PRESET_THEMES = [
+        ("#0284C7", "蔚藍"),
+        ("#16A34A", "翡翠綠"),
+        ("#EA580C", "活力橘"),
+        ("#9333EA", "紫羅蘭"),
+        ("#E11D48", "薔薇紅"),
+        ("#0D9488", "石青綠")
+    ]
+
+    PRESET_HOTKEYS = [
+        ("Ctrl + ` (單手預設)", "<ctrl>+`", "Ctrl + `"),
+        ("Ctrl + Shift + D (Drop)", "<ctrl>+<shift>+d", "Ctrl + Shift + D"),
+        ("Ctrl + Shift + S (Shelf)", "<ctrl>+<shift>+s", "Ctrl + Shift + S"),
+        ("Alt + Space", "<alt>+<space>", "Alt + Space"),
+        ("Ctrl + Alt + V", "<ctrl>+<alt>+v", "Ctrl + Alt + V"),
+    ]
+
+    def __init__(self, config_manager: ConfigManager, parent=None):
+        super().__init__(parent)
+        self.config_manager = config_manager
+        self.selected_theme_color = "#0284C7"
+        self.theme_buttons = []
+        
+        self.setWindowTitle("DropShelf 偏好設定")
+        self.setMinimumSize(480, 600)
+        self.resize(480, 620)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+
+        self.init_ui()
+        self.load_values()
+
+    def init_ui(self):
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #F8FAFC;
+                font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            }
+            QLabel {
+                color: #1E293B;
+            }
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 16, 20, 16)
+        layout.setSpacing(14)
+
+        # 頂部說明
+        title_label = QLabel("⚙️ 偏好設定", self)
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #0F172A;")
+        layout.addWidget(title_label)
+
+        # 區塊 1: 召喚與操作
+        group_trigger = QFrame(self)
+        group_trigger.setStyleSheet("""
+            QFrame#TriggerGroup {
+                background-color: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-radius: 10px;
+            }
+        """)
+        group_trigger.setObjectName("TriggerGroup")
+        trigger_layout = QVBoxLayout(group_trigger)
+        trigger_layout.setContentsMargins(14, 14, 14, 14)
+        trigger_layout.setSpacing(10)
+
+        trigger_title = QLabel("⚡ 召喚與觸發行為", group_trigger)
+        trigger_title.setStyleSheet("font-weight: bold; font-size: 14px; color: #0F172A; border: none;")
+        trigger_layout.addWidget(trigger_title)
+
+        # 晃動召喚開關
+        self.cb_shake = QCheckBox("啟用滑鼠晃動召喚 (Shake to Summon)", group_trigger)
+        self.cb_shake.setStyleSheet("font-size: 13px; font-weight: 500; border: none;")
+        self.cb_shake.toggled.connect(self.on_shake_toggled)
+        trigger_layout.addWidget(self.cb_shake)
+
+        # 靈敏度調整
+        sens_header = QHBoxLayout()
+        sens_label = QLabel("晃動靈敏度：", group_trigger)
+        sens_label.setStyleSheet("font-size: 12px; color: #475569; border: none;")
+        self.sens_val_label = QLabel("標準 (等級 3)", group_trigger)
+        self.sens_val_label.setStyleSheet("font-size: 12px; font-weight: bold; color: #0284C7; border: none;")
+        sens_header.addWidget(sens_label)
+        sens_header.addStretch()
+        sens_header.addWidget(self.sens_val_label)
+        trigger_layout.addLayout(sens_header)
+
+        self.slider_sens = QSlider(Qt.Horizontal, group_trigger)
+        self.slider_sens.setRange(1, 5)
+        self.slider_sens.setTickPosition(QSlider.TicksBelow)
+        self.slider_sens.setTickInterval(1)
+        self.slider_sens.valueChanged.connect(self.on_sens_changed)
+        trigger_layout.addWidget(self.slider_sens)
+
+        sens_ticks = QHBoxLayout()
+        lbl_low = QLabel("偏鈍 (防誤觸)", group_trigger)
+        lbl_mid = QLabel("標準", group_trigger)
+        lbl_high = QLabel("極靈敏", group_trigger)
+        for lbl in (lbl_low, lbl_mid, lbl_high):
+            lbl.setStyleSheet("font-size: 11px; color: #94A3B8; border: none;")
+        sens_ticks.addWidget(lbl_low)
+        sens_ticks.addStretch()
+        sens_ticks.addWidget(lbl_mid)
+        sens_ticks.addStretch()
+        sens_ticks.addWidget(lbl_high)
+        trigger_layout.addLayout(sens_ticks)
+
+        line_sep = QFrame()
+        line_sep.setFrameShape(QFrame.HLine)
+        line_sep.setStyleSheet("background-color: #F1F5F9; border: none; max-height: 1px;")
+        trigger_layout.addWidget(line_sep)
+
+        # 全域快捷鍵
+        hotkey_label = QLabel("全域召喚快捷鍵：", group_trigger)
+        hotkey_label.setStyleSheet("font-size: 12px; color: #475569; border: none;")
+        trigger_layout.addWidget(hotkey_label)
+
+        hotkey_row = QHBoxLayout()
+        hotkey_row.setSpacing(8)
+        self.hotkey_edit = HotkeyRecorderEdit(group_trigger)
+        self.hotkey_edit.setFixedHeight(36)
+        self.hotkey_edit.hotkey_captured.connect(self.on_custom_hotkey_captured)
+        
+        self.combo_presets = QComboBox(group_trigger)
+        self.combo_presets.setFixedHeight(36)
+        self.combo_presets.setStyleSheet("""
+            QComboBox {
+                border: 1px solid #CBD5E1;
+                border-radius: 6px;
+                padding-left: 10px;
+                padding-right: 28px;
+                background-color: #FFFFFF;
+                font-size: 13px;
+                font-weight: 500;
+                color: #334155;
+                min-height: 34px;
+            }
+            QComboBox:hover {
+                border-color: #94A3B8;
+            }
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 26px;
+                border-left: 1px solid #E2E8F0;
+                border-top-right-radius: 6px;
+                border-bottom-right-radius: 6px;
+            }
+            QComboBox::down-arrow {
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 5px solid #64748B;
+                width: 0px;
+                height: 0px;
+            }
+            QComboBox QAbstractItemView {
+                border: 1px solid #CBD5E1;
+                border-radius: 6px;
+                background-color: #FFFFFF;
+                selection-background-color: #F1F5F9;
+                selection-color: #0284C7;
+                padding: 4px;
+            }
+        """)
+        for display_name, pynput_code, pure_display in self.PRESET_HOTKEYS:
+            self.combo_presets.addItem(display_name, (pynput_code, pure_display))
+        self.combo_presets.addItem("自訂錄製...", "custom")
+        self.combo_presets.currentIndexChanged.connect(self.on_preset_hotkey_selected)
+
+        hotkey_row.addWidget(self.hotkey_edit, stretch=2)
+        hotkey_row.addWidget(self.combo_presets, stretch=3)
+        trigger_layout.addLayout(hotkey_row)
+
+        layout.addWidget(group_trigger)
+
+        layout.addWidget(group_trigger)
+
+        # 區塊 2: 外觀主題
+        group_appearance = QFrame(self)
+        group_appearance.setStyleSheet("""
+            QFrame {
+                background-color: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-radius: 10px;
+                padding: 12px;
+            }
+        """)
+        app_layout = QVBoxLayout(group_appearance)
+        app_layout.setSpacing(10)
+
+        app_title = QLabel("🎨 外觀與主題色", group_appearance)
+        app_title.setStyleSheet("font-weight: bold; font-size: 14px; color: #0F172A; border: none;")
+        app_layout.addWidget(app_title)
+
+        # 預設色彩按鈕
+        color_layout = QHBoxLayout()
+        color_layout.setSpacing(8)
+        self.theme_buttons = []
+        for hex_code, color_name in self.PRESET_THEMES:
+            btn = QPushButton(group_appearance)
+            btn.setFixedSize(30, 30)
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.setToolTip(color_name)
+            btn.clicked.connect(lambda checked=False, c=hex_code: self.select_color(c))
+            color_layout.addWidget(btn)
+            self.theme_buttons.append((btn, hex_code))
+
+        # 自訂選色按鈕
+        self.btn_custom_color = QPushButton("🎨 自訂...", group_appearance)
+        self.btn_custom_color.setCursor(Qt.PointingHandCursor)
+        self.btn_custom_color.setStyleSheet("""
+            QPushButton {
+                background-color: #F8FAFC;
+                border: 1px solid #CBD5E1;
+                border-radius: 6px;
+                padding: 4px 10px;
+                font-size: 12px;
+                font-weight: 500;
+                color: #334155;
+            }
+            QPushButton:hover {
+                background-color: #F1F5F9;
+                border-color: #94A3B8;
+            }
+        """)
+        self.btn_custom_color.clicked.connect(self.open_color_dialog)
+        color_layout.addWidget(self.btn_custom_color)
+        color_layout.addStretch()
+        app_layout.addLayout(color_layout)
+
+        # 即時預覽卡片
+        self.preview_card = QFrame(group_appearance)
+        self.preview_card.setObjectName("PreviewCard")
+        self.preview_card.setFixedHeight(50)
+        self.preview_layout = QHBoxLayout(self.preview_card)
+        self.preview_layout.setContentsMargins(14, 8, 14, 8)
+        
+        self.preview_title = QLabel("置物架 #1", self.preview_card)
+        self.preview_title.setStyleSheet("font-weight: bold; font-size: 13px; border: none; background: transparent;")
+        
+        self.preview_btn_new = QLabel("＋", self.preview_card)
+        self.preview_btn_new.setStyleSheet("font-size: 16px; font-weight: bold; border: none; background: transparent;")
+        
+        self.preview_desc = QLabel("🎨 即時樣式預覽", self.preview_card)
+        self.preview_desc.setStyleSheet("color: #64748B; font-size: 12px; border: none; background: transparent;")
+
+        self.preview_layout.addWidget(self.preview_title)
+        self.preview_layout.addWidget(self.preview_btn_new)
+        self.preview_layout.addStretch()
+        self.preview_layout.addWidget(self.preview_desc)
+
+        app_layout.addWidget(self.preview_card)
+        layout.addWidget(group_appearance)
+
+        # 底部操作按鈕
+        bottom_layout = QHBoxLayout()
+        bottom_layout.setSpacing(10)
+
+        self.btn_reset = QPushButton("恢復預設值", self)
+        self.btn_reset.setCursor(Qt.PointingHandCursor)
+        self.btn_reset.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                border: none;
+                color: #64748B;
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+            QPushButton:hover {
+                color: #EF4444;
+            }
+        """)
+        self.btn_reset.clicked.connect(self.restore_defaults)
+        bottom_layout.addWidget(self.btn_reset)
+
+        bottom_layout.addStretch()
+
+        self.btn_cancel = QPushButton("取消", self)
+        self.btn_cancel.setCursor(Qt.PointingHandCursor)
+        self.btn_cancel.setStyleSheet("""
+            QPushButton {
+                background-color: #FFFFFF;
+                border: 1px solid #CBD5E1;
+                border-radius: 6px;
+                padding: 6px 14px;
+                font-size: 13px;
+                color: #334155;
+            }
+            QPushButton:hover {
+                background-color: #F1F5F9;
+            }
+        """)
+        self.btn_cancel.clicked.connect(self.reject)
+        bottom_layout.addWidget(self.btn_cancel)
+
+        self.btn_save = QPushButton("儲存並套用", self)
+        self.btn_save.setCursor(Qt.PointingHandCursor)
+        self.btn_save.setStyleSheet("""
+            QPushButton {
+                background-color: #0284C7;
+                border: none;
+                border-radius: 6px;
+                padding: 6px 18px;
+                font-size: 13px;
+                font-weight: 600;
+                color: #FFFFFF;
+            }
+            QPushButton:hover {
+                background-color: #0369A1;
+            }
+        """)
+        self.btn_save.clicked.connect(self.save_and_apply)
+        bottom_layout.addWidget(self.btn_save)
+
+        layout.addLayout(bottom_layout)
+
+    def load_values(self):
+        cfg = self.config_manager.config
+        self.cb_shake.setChecked(cfg.get("shake_enabled", True))
+        sens = cfg.get("shake_sensitivity", 3)
+        self.slider_sens.setValue(sens)
+        self.update_sens_label(sens)
+
+        current_hotkey = cfg.get("hotkey", "<ctrl>+`")
+        current_display = cfg.get("hotkey_display", "Ctrl + `")
+        self.hotkey_edit.set_hotkey(current_hotkey, current_display)
+
+        # 同步下拉選單
+        matched_idx = -1
+        for i in range(self.combo_presets.count() - 1):
+            data = self.combo_presets.itemData(i)
+            if data and data[0] == current_hotkey:
+                matched_idx = i
+                break
+        if matched_idx >= 0:
+            self.combo_presets.setCurrentIndex(matched_idx)
+        else:
+            self.combo_presets.setCurrentIndex(self.combo_presets.count() - 1)
+
+        self.select_color(cfg.get("theme_color", "#0284C7"))
+
+    def on_shake_toggled(self, checked):
+        self.slider_sens.setEnabled(checked)
+        self.sens_val_label.setEnabled(checked)
+
+    def on_sens_changed(self, val):
+        self.update_sens_label(val)
+
+    def update_sens_label(self, val):
+        labels = {
+            1: "偏鈍 (防誤觸)",
+            2: "略鈍",
+            3: "標準 (推薦)",
+            4: "靈敏",
+            5: "極靈敏"
+        }
+        self.sens_val_label.setText(f"{labels.get(val, '')} (等級 {val})")
+
+    def on_preset_hotkey_selected(self, index):
+        if index < 0:
+            return
+        data = self.combo_presets.itemData(index)
+        if data == "custom":
+            self.hotkey_edit.start_recording()
+        elif data:
+            pynput_code, pure_display = data
+            self.hotkey_edit.set_hotkey(pynput_code, pure_display)
+
+    def on_custom_hotkey_captured(self, pynput_str, display_str):
+        matched = False
+        for i in range(self.combo_presets.count() - 1):
+            data = self.combo_presets.itemData(i)
+            if data and data[0] == pynput_str:
+                self.combo_presets.blockSignals(True)
+                self.combo_presets.setCurrentIndex(i)
+                self.combo_presets.blockSignals(False)
+                matched = True
+                break
+        if not matched:
+            self.combo_presets.blockSignals(True)
+            self.combo_presets.setCurrentIndex(self.combo_presets.count() - 1)
+            self.combo_presets.blockSignals(False)
+
+    def select_color(self, hex_color):
+        self.selected_theme_color = hex_color
+        for btn, c in self.theme_buttons:
+            if c.lower() == hex_color.lower():
+                btn.setStyleSheet(f"""
+                    QPushButton {{
+                        background-color: {c};
+                        border: 3px solid #0F172A;
+                        border-radius: 15px;
+                    }}
+                """)
+            else:
+                btn.setStyleSheet(f"""
+                    QPushButton {{
+                        background-color: {c};
+                        border: 1px solid #CBD5E1;
+                        border-radius: 15px;
+                    }}
+                    QPushButton:hover {{
+                        border: 2px solid #64748B;
+                    }}
+                """)
+
+        # 更新預覽卡片
+        self.preview_card.setStyleSheet(f"""
+            QFrame#PreviewCard {{
+                background-color: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-top: 4px solid {hex_color};
+                border-radius: 8px;
+            }}
+        """)
+        self.preview_title.setStyleSheet(f"font-weight: bold; font-size: 13px; color: {hex_color}; border: none; background: transparent;")
+        self.preview_btn_new.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {hex_color}; border: none; background: transparent;")
+
+    def open_color_dialog(self):
+        col = QColorDialog.getColor(QColor(self.selected_theme_color), self, "選擇主題色彩")
+        if col.isValid():
+            self.select_color(col.name())
+
+    def restore_defaults(self):
+        defaults = self.config_manager.DEFAULT_CONFIG
+        self.cb_shake.setChecked(defaults["shake_enabled"])
+        self.slider_sens.setValue(defaults["shake_sensitivity"])
+        self.hotkey_edit.set_hotkey(defaults["hotkey"], defaults["hotkey_display"])
+        self.combo_presets.setCurrentIndex(0)
+        self.select_color(defaults["theme_color"])
+
+    def save_and_apply(self):
+        new_cfg = {
+            "shake_enabled": self.cb_shake.isChecked(),
+            "shake_sensitivity": self.slider_sens.value(),
+            "hotkey": self.hotkey_edit.pynput_format,
+            "hotkey_display": self.hotkey_edit.display_format,
+            "theme_color": self.selected_theme_color
+        }
+        self.config_manager.save_config(new_cfg)
+        self.accept()
+
 
 
 # ==========================================
@@ -422,6 +1116,15 @@ class DropShelfWidget(QWidget):
         self.btn_pin.setStyleSheet("border: none; background: transparent; font-size: 12px;")
         self.btn_pin.clicked.connect(self.toggle_pin)
 
+        # 偏好設定按鈕
+        self.btn_settings = QPushButton("⚙️", self)
+        self.btn_settings.setFixedSize(24, 24)
+        self.btn_settings.setCursor(Qt.PointingHandCursor)
+        self.btn_settings.setToolTip("偏好設定")
+        self.btn_settings.setStyleSheet("border: none; background: transparent; font-size: 12px;")
+        if self.manager:
+            self.btn_settings.clicked.connect(self.manager.open_settings)
+
         # 模式切換按鈕
         self.drag_mode = "copy"
         self.btn_mode = QPushButton("複製", self)
@@ -433,7 +1136,7 @@ class DropShelfWidget(QWidget):
         # 全選按鈕
         self.btn_select_all = QPushButton("全選", self)
         self.btn_select_all.setCursor(Qt.PointingHandCursor)
-        self.btn_select_all.setStyleSheet("border: none; color: #0284C7; font-size: 12px; margin: 0 2px;")
+        self.btn_select_all.setStyleSheet(f"border: none; color: {self.theme_color}; font-size: 12px; margin: 0 2px;")
 
         # 清空按鈕
         self.btn_clear = QPushButton("清空", self)
@@ -455,6 +1158,7 @@ class DropShelfWidget(QWidget):
         header_layout.addWidget(self.btn_select_all)
         header_layout.addWidget(self.btn_zip)
         header_layout.addWidget(self.btn_pin)
+        header_layout.addWidget(self.btn_settings)
         header_layout.addWidget(self.btn_clear)
         header_layout.addWidget(self.btn_close)
         container_layout.addLayout(header_layout)
@@ -471,6 +1175,21 @@ class DropShelfWidget(QWidget):
         container_layout.addWidget(self.hint_label)
 
         main_layout.addWidget(self.container)
+
+    def update_theme_color(self, new_color):
+        """即時套用並更新主題色"""
+        self.theme_color = new_color
+        self.container.setStyleSheet(f"""
+            QWidget#Container {{
+                background-color: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-top: 4px solid {self.theme_color};
+                border-radius: 12px;
+            }}
+        """)
+        self.title_label.setStyleSheet(f"font-weight: bold; color: {self.theme_color}; font-size: 14px;")
+        self.btn_new.setStyleSheet(f"border: none; background: transparent; font-size: 16px; color: {self.theme_color}; margin: 0 2px;")
+        self.btn_select_all.setStyleSheet(f"border: none; color: {self.theme_color}; font-size: 12px; margin: 0 2px;")
 
     def zip_all_files(self):
         if not self.file_paths:
@@ -699,11 +1418,16 @@ def get_resource_path(relative_path):
 # 5. 置物架管理員與程式進入點
 # ==========================================
 class ShelfManager(QObject):
-    def __init__(self):
+    def __init__(self, config_manager: ConfigManager = None):
         super().__init__()
+        self.config_manager = config_manager or ConfigManager()
         self.shelves = []
         self.next_id = 1
-        self.colors = ["#0284C7", "#16A34A", "#EA580C", "#9333EA", "#E11D48", "#0D9488"]
+        self.current_theme = self.config_manager.config.get("theme_color", "#0284C7")
+        self.colors = [self.current_theme, "#16A34A", "#EA580C", "#9333EA", "#E11D48", "#0D9488"]
+        self.settings_dialog = None
+
+        self.config_manager.config_changed.connect(self.on_config_changed)
         
         self.watcher = QFileSystemWatcher(self)
         self.watcher.directoryChanged.connect(self.on_directory_changed)
@@ -712,6 +1436,23 @@ class ShelfManager(QObject):
         
         self.init_tray()
         self.create_shelf()
+
+    def on_config_changed(self, new_config):
+        """當設定變更時即時套用主題色彩"""
+        new_theme = new_config.get("theme_color", "#0284C7")
+        self.current_theme = new_theme
+        self.colors[0] = new_theme
+        for shelf in self.shelves:
+            shelf.update_theme_color(new_theme)
+
+    def open_settings(self):
+        """開啟偏好設定視窗"""
+        if not self.settings_dialog:
+            self.settings_dialog = SettingsDialog(self.config_manager)
+        self.settings_dialog.load_values()
+        self.settings_dialog.show()
+        self.settings_dialog.raise_()
+        self.settings_dialog.activateWindow()
         
     def init_tray(self):
         self.tray_icon = QSystemTrayIcon(self)
@@ -745,6 +1486,10 @@ class ShelfManager(QObject):
         
         act_show = self.tray_menu.addAction("顯示所有置物架")
         act_show.triggered.connect(self.show_all)
+        self.tray_menu.addSeparator()
+
+        act_settings = self.tray_menu.addAction("⚙️ 偏好設定...")
+        act_settings.triggered.connect(self.open_settings)
         self.tray_menu.addSeparator()
         
         act_watch = self.tray_menu.addAction("👀 設定監控資料夾...")
@@ -878,11 +1623,12 @@ def main():
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
 
-    manager = ShelfManager()
+    config_manager = ConfigManager()
+    manager = ShelfManager(config_manager=config_manager)
     signals = TriggerSignals()
     signals.show_shelf.connect(manager.on_shake)
 
-    monitor = GlobalInputMonitor(signals)
+    monitor = GlobalInputMonitor(signals, config_manager=config_manager)
     monitor.start()
 
     sys.exit(app.exec())

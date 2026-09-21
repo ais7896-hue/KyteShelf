@@ -123,3 +123,5 @@ sign
 *.spec
 
 Output/
+config.json
+Walkthrough/

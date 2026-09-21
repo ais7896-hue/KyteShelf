@@ -5,7 +5,7 @@
 [![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![GUI Framework](https://img.shields.io/badge/GUI-PySide6-41CD52.svg)](https://wiki.qt.io/Qt_for_Python)
 [![Platform](https://img.shields.io/badge/Platform-Windows_x64-0078D6.svg)](https://www.microsoft.com/windows)
-[![License](https://img.shields.io/badge/License-MIT-orange.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Personal_Use_Only-orange.svg)](LICENSE)
 
 **DropShelf** 讓你在 Windows 上進行跨資料夾、跨應用程式移動檔案時不再手忙腳亂。當你抓住檔案並輕微晃動滑鼠，置物架便會自動浮現在游標旁，讓你暫存檔案，隨後拖入任何目的地。
 
@@ -49,7 +49,7 @@ pip install -r requirements.txt
 ### 2. 啟動程式
 
 ```powershell
-python "DropShelf V1.0.0.py"
+python "DropShelf V1.0.1.py"
 ```
 
 ---
@@ -59,6 +59,7 @@ python "DropShelf V1.0.0.py"
 | 操作 | 動作 |
 | :--- | :--- |
 | **召喚置物架** | 按住檔案並**左右輕微晃動**游標，或按下 `Ctrl + ~` |
+| **偏好設定** | 點擊置物架頂部的「⚙️」按鈕，或右下角系統匣選單「⚙️ 偏好設定」 |
 | **暫存檔案** | 將任何檔案、圖片直接拖入置物架視窗內 |
 | **釋放檔案** | 從置物架選取檔案，直接拖曳到檔案總管、桌面或其他程式 |
 | **右鍵選單** | 對置物架內的檔案點擊右鍵：可開啟檔案所在目錄、複製路徑、打包 ZIP、轉換圖片或附加至 Outlook |
@@ -71,7 +72,7 @@ python "DropShelf V1.0.0.py"
 使用 PyInstaller 進行打包（無主控台視窗 + 嵌入圖示）：
 
 ```powershell
-pyinstaller --noconsole --onefile --icon=icon.ico "DropShelf V1.0.0.py"
+pyinstaller --noconsole --onefile --icon=icon.ico "DropShelf V1.0.1.py"
 ```
 
 > 搭配 Inno Setup 腳本（`setup.iss`）可進一步封裝成標準安裝程式精靈。
@@ -87,6 +88,13 @@ pyinstaller --noconsole --onefile --icon=icon.ico "DropShelf V1.0.0.py"
 
 ---
 
+## 📝 更新履歷
+
+詳細版本演進紀錄請參閱 [CHANGELOG.md](CHANGELOG.md)。
+
+---
+
 ## 📄 授權條款
 
-本專案採用 [MIT License](LICENSE) 授權。
+本專案原始碼僅供個人學習與檢閱用途，嚴格禁止未經授權的商業用途、轉售或重新打包發布。商業使用或官方封裝成品請洽原作者購買正式授權，詳見 [LICENSE](LICENSE)。
+
