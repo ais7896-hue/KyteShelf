@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KyteShelf - 專為 Windows 打造的輕量桌面拖曳暫存置物架</title>
+    <meta name="description" content="告別多視窗手忙腳亂！抓住檔案晃動滑鼠立即召喚置物架，支援剪貼簿貼上、圖片即時預覽、一鍵壓ZIP與Outlook郵件整合。">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif;
+        }
+
+        .gradient-hero {
+            background: radial-gradient(circle at 50% 20%, rgba(59, 130, 246, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-blue-500 selection:text-white">
+
+    <!-- 導覽列 -->
+    <nav class="sticky top-0 z-50 backdrop-blur-md bg-white/80 border-b border-slate-200/80">
+        <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+                    <i class="fa-solid fa-layer-group text-lg"></i>
+                </div>
+                <span class="text-xl font-extrabold tracking-tight text-slate-900">KyteShelf</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="#features"
+                    class="hidden sm:block text-sm font-semibold text-slate-600 hover:text-blue-600 transition">功能特色</a>
+                <a href="#scenarios"
+                    class="hidden sm:block text-sm font-semibold text-slate-600 hover:text-blue-600 transition">應用場景</a>
+                <a href="#faq"
+                    class="hidden sm:block text-sm font-semibold text-slate-600 hover:text-blue-600 transition">常見問答</a>
+                <a href="#pricing"
+                    class="px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition">立即獲取</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero 英雄區塊 -->
+    <header class="relative gradient-hero pt-16 pb-20 px-6 text-center overflow-hidden">
+        <div class="max-w-4xl mx-auto">
+            <div
+                class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-6">
+                <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                專為 Windows 10 / 11 深度調校的桌面效率神器
+            </div>
+            <h1 class="text-4xl sm:text-6xl font-black text-slate-950 tracking-tight leading-tight mb-6">
+                抓住檔案晃一下，<br class="hidden sm:inline">工作流不再手忙腳亂
+            </h1>
+            <p class="text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto font-normal leading-relaxed mb-10">
+                不再需要為了搬檔案把螢幕切得密密麻麻。按住檔案輕晃滑鼠，專屬置物架立即浮現於游標旁，隨放隨走，釋放你的 Windows 生產力。
+            </p>
+
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+                <a href="#pricing"
+                    class="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 transition transform active:scale-95 flex items-center justify-center gap-2">
+                    <span>取得終身買斷版 (NT$ 399)</span>
+                    <i class="fa-solid fa-arrow-right text-sm"></i>
+                </a>
+                <a href="https://github.com/ais7896-hue/KyteShelf" target="_blank"
+                    class="w-full sm:w-auto px-6 py-3.5 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-xl border border-slate-300 shadow-sm transition flex items-center justify-center gap-2">
+                    <i class="fa-brands fa-github text-lg"></i>
+                    <span>檢閱 GitHub 原始碼</span>
+                </a>
+            </div>
+
+            <!-- 介面展示卡片模擬 -->
+            <div
+                class="max-w-md mx-auto bg-white rounded-3xl p-4 shadow-2xl shadow-slate-300/60 border border-slate-200 text-left">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                        <span class="text-sm font-bold text-slate-800">置物架 #1</span>
+                        <span class="px-2 py-0.5 text-xs font-bold bg-blue-50 text-blue-600 rounded-full">3</span>
+                    </div>
+                    <div class="flex items-center gap-3 text-slate-400 text-xs">
+                        <i class="fa-solid fa-plus hover:text-slate-700 cursor-pointer"></i>
+                        <i class="fa-solid fa-thumbtack text-blue-600"></i>
+                        <i class="fa-solid fa-gear hover:text-slate-700 cursor-pointer"></i>
+                        <i class="fa-solid fa-xmark hover:text-slate-700 cursor-pointer"></i>
+                    </div>
+                </div>
+
+                <div class="py-3 space-y-2">
+                    <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-8 h-8 rounded bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
+                                JPG</div>
+                            <div>
+                                <div class="text-xs font-semibold text-slate-800">設計草稿_v2.jpg</div>
+                                <div class="text-[10px] text-slate-400">1920 × 1080 • 1.4 MB</div>
+                            </div>
+                        </div>
+                        <span class="text-xs text-slate-400 hover:text-slate-600 cursor-pointer">✕</span>
+                    </div>
+
+                    <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-8 h-8 rounded bg-amber-100 text-amber-600 flex items-center justify-center text-xs font-bold">
+                                ZIP</div>
+                            <div>
+                                <div class="text-xs font-semibold text-slate-800">報價單匯總.zip</div>
+                                <div class="text-[10px] text-slate-400">2 份文件 • 320 KB</div>
+                            </div>
+                        </div>
+                        <span class="text-xs text-slate-400 hover:text-slate-600 cursor-pointer">✕</span>
+                    </div>
+
+                    <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-8 h-8 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">
+                                TXT</div>
+                            <div>
+                                <div class="text-xs font-semibold text-slate-800">備忘便箋：週五前寄出合約</div>
+                                <div class="text-[10px] text-slate-400">自黏便箋 (雙擊編輯)</div>
+                            </div>
+                        </div>
+                        <span class="text-xs text-slate-400 hover:text-slate-600 cursor-pointer">✕</span>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex items-center justify-between border-t border-slate-100 text-xs text-slate-600">
+                    <span class="px-2.5 py-1 rounded bg-slate-100 font-medium">📋 複製模式</span>
+                    <div class="flex gap-1.5">
+                        <span
+                            class="px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 cursor-pointer">全選</span>
+                        <span
+                            class="px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 cursor-pointer">ZIP</span>
+                        <span
+                            class="px-2 py-1 rounded border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 cursor-pointer font-medium">清空</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 痛點對照 -->
+    <section class="py-16 bg-white border-y border-slate-200/80">
+        <div class="max-w-5xl mx-auto px-6">
+            <div class="text-center max-w-2xl mx-auto mb-12">
+                <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">你是否也經歷過這些 Windows 拖放惡夢？</h2>
+                <p class="text-slate-500 text-sm sm:text-base">繁瑣的操作不該浪費你寶貴的工作專注力。</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="bg-rose-50/50 border border-rose-200/80 rounded-2xl p-6">
+                    <div class="flex items-center gap-2 text-rose-600 font-bold mb-4">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                        <span>傳統操作方式</span>
+                    </div>
+                    <ul class="space-y-3 text-sm text-slate-600">
+                        <li class="flex items-start gap-2">
+                            <span class="text-rose-500 font-bold">✕</span>
+                            <span>為了搬 3 個檔案，必須並排打開 2 到 3 個檔案總管視窗。</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-rose-500 font-bold">✕</span>
+                            <span>按住檔案懸停在工作列等軟體跳出，一不小心手滑掉錯資料夾。</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-rose-500 font-bold">✕</span>
+                            <span>雙螢幕或超寬螢幕上，滑鼠要拖著檔案橫跨幾千像素，手腕負擔沉重。</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="bg-blue-50/50 border border-blue-200/80 rounded-2xl p-6">
+                    <div class="flex items-center gap-2 text-blue-600 font-bold mb-4">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>使用 KyteShelf 後</span>
+                    </div>
+                    <ul class="space-y-3 text-sm text-slate-700 font-medium">
+                        <li class="flex items-start gap-2">
+                            <span class="text-blue-600 font-bold">✓</span>
+                            <span>抓起檔案輕微晃動，置物架立即在滑鼠邊浮現接住檔案。</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-blue-600 font-bold">✓</span>
+                            <span>暫存後雙手完全放開，從容切換視窗，再一口氣拖曳釋放。</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-blue-600 font-bold">✓</span>
+                            <span>滑鼠走到哪、檔案帶到哪，推車式沿路收集分散在各處的文件。</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 核心特色 (Features) -->
+    <section id="features" class="py-20 px-6 max-w-6xl mx-auto">
+        <div class="text-center max-w-2xl mx-auto mb-16">
+            <span class="text-blue-600 font-bold text-xs uppercase tracking-widest">Core Features</span>
+            <h2 class="text-3xl font-extrabold text-slate-900 mt-2 mb-4">精心打磨的每個微小細節</h2>
+            <p class="text-slate-500">不只是一個暫存盒，而是全面升級你的 Windows 操作直覺。</p>
+        </div>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                <div
+                    class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-xl mb-4">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-900 mb-2">晃動即刻召喚</h3>
+                <p class="text-sm text-slate-500 leading-relaxed">抓住檔案並左右輕微晃動，置物架立刻出現於手邊；也可使用全域快捷鍵 <code
+                        class="px-1.5 py-0.5 bg-slate-100 rounded text-xs text-slate-700">Ctrl + ~</code> 隨叫隨到。</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                <div
+                    class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center text-xl mb-4">
+                    <i class="fa-solid fa-paste"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-900 mb-2">萬物皆可剪貼簿貼上</h3>
+                <p class="text-sm text-slate-500 leading-relaxed">支援 <code
+                        class="px-1.5 py-0.5 bg-slate-100 rounded text-xs text-slate-700">Ctrl + V</code>。截圖點陣圖、網頁圖片網址、純文字或檔案，自動識別並快速入架。
+                </p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                <div
+                    class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl mb-4">
+                    <i class="fa-solid fa-eye"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-900 mb-2">懸停高畫質即時預覽</h3>
+                <p class="text-sm text-slate-500 leading-relaxed">滑鼠停在圖片項目上即刻彈出高畫質預覽卡片與尺寸大小，載入延遲小於 10ms，免開看圖軟體。</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                <div
+                    class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl mb-4">
+                    <i class="fa-solid fa-file-zipper"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-900 mb-2">一鍵壓縮打包 ZIP</h3>
+                <p class="text-sm text-slate-500 leading-relaxed">收集好各路徑檔案後，點擊底部 ZIP 按鈕或右鍵選單，原地直接打包壓縮，整理分享一氣呵成。</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                <div class="w-12 h-12 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center text-xl mb-4">
+                    <i class="fa-solid fa-envelope-open-text"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-900 mb-2">Outlook 附件無縫直串</h3>
+                <p class="text-sm text-slate-500 leading-relaxed">深度整合 Windows COM 介面，選取檔案右鍵即可自動掛載至正在編輯的 Outlook 郵件草稿中。
+                </p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                <div
+                    class="w-12 h-12 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl mb-4">
+                    <i class="fa-solid fa-note-sticky"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-900 mb-2">智慧自黏便箋 (Sticky Notes)</h3>
+                <p class="text-sm text-slate-500 leading-relaxed">文字與網址拖入後自動轉化為便箋卡片，支援按兩下獨立編輯，拖出能直接貼入任何聊天室或編輯器。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 價格方案 (Pricing) -->
+    <section id="pricing" class="py-20 bg-slate-900 text-white px-6">
+        <div class="max-w-4xl mx-auto text-center">
+            <span class="text-blue-400 font-bold text-xs uppercase tracking-widest">Simple Pricing</span>
+            <h2 class="text-3xl sm:text-4xl font-black mt-2 mb-4">一次買斷，終身受用</h2>
+            <p class="text-slate-400 max-w-xl mx-auto mb-12">拒絕每個月扣款的訂閱制。只需一杯咖啡的價格，讓日常工作效率永久倍增。</p>
+
+            <div class="max-w-md mx-auto bg-slate-800 border border-slate-700 rounded-3xl p-8 shadow-2xl relative">
+                <div
+                    class="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full text-xs font-extrabold uppercase tracking-wider text-white shadow-md">
+                    終生個人授權
+                </div>
+
+                <div class="flex items-baseline justify-center gap-2 mb-6">
+                    <span class="text-5xl font-black tracking-tight">NT$ 399</span>
+                    <span class="text-slate-400 text-sm">/ 永久使用</span>
+                </div>
+
+                <ul class="space-y-3.5 text-left text-sm text-slate-300 mb-8">
+                    <li class="flex items-center gap-3">
+                        <i class="fa-solid fa-check text-blue-400"></i>
+                        <span>解鎖全部專業功能（圖片轉換、ZIP打包、Outlook串接）</span>
+                    </li>
+                    <li class="flex items-center gap-3">
+                        <i class="fa-solid fa-check text-blue-400"></i>
+                        <span>單組授權支援啟用 2 台個人 Windows 裝置</span>
+                    </li>
+                    <li class="flex items-center gap-3">
+                        <i class="fa-solid fa-check text-blue-400"></i>
+                        <span>永久免費小版本維護與功能更新</span>
+                    </li>
+                    <li class="flex items-center gap-3">
+                        <i class="fa-solid fa-check text-blue-400"></i>
+                        <span>純淨無廣告、本機離線運作、注重個人隱私</span>
+                    </li>
+                </ul>
+
+                <div class="space-y-3">
+                    <a href="https://lemonsqueezy.com" target="_blank"
+                        class="block w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg transition">
+                        線上信用卡即時取得序號 (Lemon Squeezy)
+                    </a>
+                    <a href="https://shopee.tw" target="_blank"
+                        class="block w-full py-3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-xl text-xs transition">
+                        台灣蝦皮賣場購買 (支援超商 / 轉帳)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 常見問答 (FAQ) -->
+    <section id="faq" class="py-20 px-6 max-w-4xl mx-auto">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl font-extrabold text-slate-900 mb-3">常見問答</h2>
+            <p class="text-slate-500">有任何疑問嗎？這裡整理了大家最常問的問題。</p>
+        </div>
+
+        <div class="space-y-4">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200">
+                <h3 class="font-bold text-slate-900 text-base mb-2">Q：支援哪些 Windows 版本？</h3>
+                <p class="text-sm text-slate-600 leading-relaxed">KyteShelf 專為 64 位元的 Windows 10 與 Windows 11
+                    系統設計與測試，全面相容系統原生暗色與亮色主題。</p>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200">
+                <h3 class="font-bold text-slate-900 text-base mb-2">Q：防毒軟體會誤報嗎？</h3>
+                <p class="text-sm text-slate-600 leading-relaxed">由於本軟體使用全域滑鼠勾點（Hook）來偵測「晃動召喚」手勢，少數防毒軟體可能出現誤判提示。本專案原始碼在
+                    GitHub 具備透明度，保證不含任何惡意程式碼，安裝時請安心點擊「允許執行」。</p>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200">
+                <h3 class="font-bold text-slate-900 text-base mb-2">Q：更換電腦或重灌系統怎麼辦？</h3>
+                <p class="text-sm text-slate-600 leading-relaxed">每組購買的正式版序號最多允許同時啟用 2
+                    台個人裝置。若您重灌電腦或更換硬體，可隨時聯繫開發者為您重置授權額度。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 頁尾 -->
+    <footer class="py-8 border-t border-slate-200 text-center text-xs text-slate-400">
+        <p>© 2026 KyteShelf. All rights reserved. 專為提升桌面工作效率而生。</p>
+    </footer>
+
+</body>
+
+</html>
