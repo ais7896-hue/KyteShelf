@@ -7,7 +7,7 @@ from .config import ConfigManager
 from .input_monitor import TriggerSignals, GlobalInputMonitor
 from .ui import ShelfManager, KyteShelfWidget, DropShelfWidget, SettingsDialog
 
-__version__ = "1.0.2"
+__version__ = "1.1.0"
 
 __all__ = [
     "get_resource_path",

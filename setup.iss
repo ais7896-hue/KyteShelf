@@ -3,7 +3,7 @@
 ; ==========================================
 
 #define MyAppName "KyteShelf"
-#define MyAppVersion "1.0.2"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "ais7896-hue"
 #define MyAppURL "https://github.com/ais7896-hue/KyteShelf"
 #define MyAppExeName "KyteShelf.exe"

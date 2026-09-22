@@ -13,7 +13,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
-    QListWidgetItem, QLabel, QPushButton, 
+    QListWidgetItem, QLabel, QPushButton, QLineEdit, QDialog, QMenu,
     QFileIconProvider, QGraphicsDropShadowEffect, 
     QFileDialog, QMessageBox
 )
@@ -22,12 +22,184 @@ from .shelf_list import ShelfFileList
 from .sticky_note import StickyNoteWindow, create_sticky_icon
 
 
+class RenameDialog(QDialog):
+    def __init__(self, current_name: str, default_name: str, theme_color: str = "#0284C7", parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("重新命名置物架")
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setFixedSize(300, 140)
+        self.theme_color = theme_color
+        self.default_name = default_name
+        self.new_name = current_name
+        self.init_ui(current_name)
+
+    def init_ui(self, current_name):
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: #FFFFFF;
+                font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            }}
+            QLabel {{
+                color: #334155;
+                font-size: 13px;
+                font-weight: 500;
+            }}
+            QLineEdit {{
+                border: 1.5px solid #CBD5E1;
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 13px;
+                color: #0F172A;
+                background-color: #F8FAFC;
+            }}
+            QLineEdit:focus {{
+                border-color: {self.theme_color};
+                background-color: #FFFFFF;
+            }}
+            QPushButton {{
+                border-radius: 6px;
+                padding: 5px 14px;
+                font-size: 12px;
+                font-weight: 500;
+            }}
+            QPushButton#SaveBtn {{
+                background-color: {self.theme_color};
+                color: #FFFFFF;
+                border: none;
+            }}
+            QPushButton#SaveBtn:hover {{
+                background-color: {self.theme_color}DD;
+            }}
+            QPushButton#CancelBtn {{
+                background-color: #F1F5F9;
+                color: #475569;
+                border: 1px solid #E2E8F0;
+            }}
+            QPushButton#CancelBtn:hover {{
+                background-color: #E2E8F0;
+            }}
+            QPushButton#ResetBtn {{
+                background: transparent;
+                color: #94A3B8;
+                border: none;
+                font-size: 11px;
+                text-decoration: underline;
+                padding: 4px;
+            }}
+            QPushButton#ResetBtn:hover {{
+                color: #64748B;
+            }}
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+
+        lbl_hint = QLabel("為此置物架自訂專屬名稱：", self)
+        layout.addWidget(lbl_hint)
+
+        self.input_edit = QLineEdit(self)
+        self.input_edit.setText(current_name)
+        self.input_edit.setPlaceholderText(self.default_name)
+        self.input_edit.selectAll()
+        layout.addWidget(self.input_edit)
+
+        btn_layout = QHBoxLayout()
+        btn_layout.setContentsMargins(0, 0, 0, 0)
+
+        btn_reset = QPushButton("還原預設", self)
+        btn_reset.setObjectName("ResetBtn")
+        btn_reset.setCursor(Qt.PointingHandCursor)
+        btn_reset.setToolTip("恢復為預設的置物架編號名稱")
+        btn_reset.clicked.connect(self.reset_to_default)
+        btn_layout.addWidget(btn_reset)
+
+        btn_layout.addStretch()
+
+        btn_cancel = QPushButton("取消", self)
+        btn_cancel.setObjectName("CancelBtn")
+        btn_cancel.setCursor(Qt.PointingHandCursor)
+        btn_cancel.clicked.connect(self.reject)
+        btn_layout.addWidget(btn_cancel)
+
+        btn_save = QPushButton("儲存", self)
+        btn_save.setObjectName("SaveBtn")
+        btn_save.setCursor(Qt.PointingHandCursor)
+        btn_save.clicked.connect(self.on_save)
+        btn_layout.addWidget(btn_save)
+
+        layout.addLayout(btn_layout)
+
+        self.input_edit.returnPressed.connect(self.on_save)
+
+    def reset_to_default(self):
+        self.input_edit.setText(self.default_name)
+        self.input_edit.selectAll()
+        self.input_edit.setFocus()
+
+    def on_save(self):
+        self.new_name = self.input_edit.text().strip()
+        self.accept()
+
+
+class EditableTitleLabel(QLabel):
+    def __init__(self, text="", parent=None):
+        super().__init__(text, parent)
+        self.setObjectName("ShelfTitleLabel")
+        self.setCursor(Qt.PointingHandCursor)
+        self.setToolTip("按兩下或右鍵重新命名置物架")
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            shelf = self.window()
+            if hasattr(shelf, "prompt_rename"):
+                shelf.prompt_rename()
+                event.accept()
+                return
+        super().mouseDoubleClickEvent(event)
+
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #FFFFFF;
+                border: 1px solid #CBD5E1;
+                border-radius: 6px;
+                padding: 4px;
+            }
+            QMenu::item {
+                padding: 6px 18px;
+                border-radius: 4px;
+                color: #1E293B;
+            }
+            QMenu::item:selected {
+                background-color: #F1F5F9;
+                color: #0284C7;
+            }
+        """)
+        shelf = self.window()
+        act_rename = menu.addAction("✏️ 重新命名置物架...")
+        menu.addSeparator()
+        is_pinned = getattr(shelf, "is_pinned", False)
+        act_pin = menu.addAction("📌 取消釘選" if is_pinned else "📌 釘選視窗")
+        act_clear = menu.addAction("🗑️ 清空此置物架")
+
+        action = menu.exec(event.globalPos())
+        if action == act_rename and hasattr(shelf, "prompt_rename"):
+            shelf.prompt_rename()
+        elif action == act_pin and hasattr(shelf, "toggle_pin"):
+            shelf.toggle_pin()
+        elif action == act_clear and hasattr(shelf, "clear_files"):
+            shelf.clear_files()
+
+
 
 class KyteShelfWidget(QWidget):
     def __init__(self, manager=None, shelf_id=1, color="#0284C7"):
         super().__init__()
         self.manager = manager
         self.shelf_id = shelf_id
+        self.custom_name = ""
         self.theme_color = color
         
         self.file_paths = []
@@ -98,8 +270,8 @@ class KyteShelfWidget(QWidget):
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.title_label = QLabel(f"置物架 #{self.shelf_id}", self)
-        self.title_label.setStyleSheet(f"font-weight: bold; color: {self.theme_color}; font-size: 14px;")
+        self.title_label = EditableTitleLabel(self.get_display_name(), self)
+        self.update_title_style()
 
         # 新增按鈕
         self.btn_new = QPushButton("＋", self)
@@ -186,6 +358,20 @@ class KyteShelfWidget(QWidget):
 
         main_layout.addWidget(self.container)
 
+    def update_title_style(self):
+        self.title_label.setStyleSheet(f"""
+            QLabel#ShelfTitleLabel {{
+                font-weight: bold;
+                color: {self.theme_color};
+                font-size: 13px;
+                padding: 2px 4px;
+                border-radius: 4px;
+            }}
+            QLabel#ShelfTitleLabel:hover {{
+                background-color: #F1F5F9;
+            }}
+        """)
+
     def update_theme_color(self, new_color):
         """即時套用並更新主題色"""
         self.theme_color = new_color
@@ -197,7 +383,7 @@ class KyteShelfWidget(QWidget):
                 border-radius: 12px;
             }}
         """)
-        self.title_label.setStyleSheet(f"font-weight: bold; color: {self.theme_color}; font-size: 14px;")
+        self.update_title_style()
         self.btn_new.setStyleSheet(f"border: none; background: transparent; font-size: 16px; color: {self.theme_color}; margin: 0 2px;")
         self.btn_select_all.setStyleSheet(f"border: none; color: {self.theme_color}; font-size: 12px; margin: 0 2px;")
 
@@ -447,6 +633,7 @@ class KyteShelfWidget(QWidget):
                     })
         return {
             "shelf_id": self.shelf_id,
+            "name": self.custom_name,
             "window_x": self.x(),
             "window_y": self.y(),
             "is_pinned": self.is_pinned,
@@ -456,6 +643,9 @@ class KyteShelfWidget(QWidget):
 
     def restore_from_state(self, state: dict):
         """從序列化狀態還原置物架內容、位置與模式"""
+        if "name" in state:
+            self.custom_name = state.get("name", "")
+
         for item_data in state.get("items", []):
             if item_data.get("type") == "file":
                 path = item_data.get("path", "")
@@ -486,9 +676,34 @@ class KyteShelfWidget(QWidget):
 
         self.update_state()
 
+    def get_display_name(self) -> str:
+        if self.custom_name and self.custom_name.strip():
+            return self.custom_name.strip()
+        return f"置物架 #{self.shelf_id}"
+
+    def prompt_rename(self):
+        default_name = f"置物架 #{self.shelf_id}"
+        current = self.custom_name if self.custom_name else default_name
+        dialog = RenameDialog(
+            current_name=current,
+            default_name=default_name,
+            theme_color=self.theme_color,
+            parent=self
+        )
+        if dialog.exec() == QDialog.Accepted:
+            new_name = dialog.new_name.strip()
+            if not new_name or new_name == default_name:
+                self.custom_name = ""
+            else:
+                self.custom_name = new_name
+            self.update_state()
+            if self.manager:
+                self.manager.save_session()
+
     def update_state(self):
         count = len(self.file_paths)
-        self.title_label.setText(f"置物架 #{self.shelf_id} ({count})")
+        display_name = self.get_display_name()
+        self.title_label.setText(f"{display_name} ({count})")
         self.hint_label.setVisible(count == 0)
 
     def popup_at(self, x: int, y: int):

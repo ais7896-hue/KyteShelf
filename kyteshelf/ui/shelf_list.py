@@ -252,6 +252,37 @@ class ShelfFileList(QListWidget):
     def open_menu(self, pos):
         item = self.itemAt(pos)
         if not item:
+            menu = QMenu(self)
+            menu.setStyleSheet("""
+                QMenu {
+                    background-color: #FFFFFF;
+                    border: 1px solid #CBD5E1;
+                    border-radius: 6px;
+                    padding: 4px;
+                }
+                QMenu::item {
+                    padding: 6px 18px;
+                    border-radius: 4px;
+                    color: #1E293B;
+                }
+                QMenu::item:selected {
+                    background-color: #F1F5F9;
+                    color: #0284C7;
+                }
+            """)
+            act_rename = menu.addAction("✏️ 重新命名置物架...")
+            menu.addSeparator()
+            is_pinned = getattr(self.shelf_window, "is_pinned", False)
+            act_pin = menu.addAction("📌 取消釘選" if is_pinned else "📌 釘選視窗")
+            act_clear = menu.addAction("🗑️ 清空置物架")
+
+            action = menu.exec(self.mapToGlobal(pos))
+            if action == act_rename and hasattr(self.shelf_window, "prompt_rename"):
+                self.shelf_window.prompt_rename()
+            elif action == act_pin and hasattr(self.shelf_window, "toggle_pin"):
+                self.shelf_window.toggle_pin()
+            elif action == act_clear and hasattr(self.shelf_window, "clear_files"):
+                self.shelf_window.clear_files()
             return
 
         path_str = item.data(Qt.UserRole)

@@ -84,6 +84,9 @@ class ShelfManager(QObject):
         
         act_show = self.tray_menu.addAction("顯示所有置物架")
         act_show.triggered.connect(self.show_all)
+
+        self.shelves_menu = self.tray_menu.addMenu("📑 置物架清單")
+        self.tray_menu.aboutToShow.connect(self.update_tray_shelves_menu)
         self.tray_menu.addSeparator()
 
         act_settings = self.tray_menu.addAction("⚙️ 偏好設定...")
@@ -106,6 +109,44 @@ class ShelfManager(QObject):
         
         self.tray_icon.setContextMenu(self.tray_menu)
         self.tray_icon.show()
+
+    def update_tray_shelves_menu(self):
+        self.shelves_menu.clear()
+        valid_shelves = [s for s in self.shelves if s.isVisible() or s.file_paths or s.is_pinned or s.custom_name]
+        if not valid_shelves:
+            act_none = self.shelves_menu.addAction("(目前無置物架)")
+            act_none.setEnabled(False)
+            return
+
+        for shelf in valid_shelves:
+            display_name = shelf.get_display_name()
+            count = len(shelf.file_paths)
+            pin_mark = " 📌" if shelf.is_pinned else ""
+            status_text = f"{display_name} ({count}){pin_mark}"
+            
+            sub_menu = self.shelves_menu.addMenu(status_text)
+            
+            act_locate = sub_menu.addAction("👀 顯示 / 置頂")
+            act_locate.triggered.connect(lambda checked=False, s=shelf: self.locate_shelf(s))
+            
+            act_rename = sub_menu.addAction("✏️ 重新命名...")
+            act_rename.triggered.connect(lambda checked=False, s=shelf: self.rename_shelf(s))
+            
+            sub_menu.addSeparator()
+            act_clear = sub_menu.addAction("🗑️ 清空此置物架")
+            act_clear.triggered.connect(lambda checked=False, s=shelf: s.clear_files())
+
+    def locate_shelf(self, shelf):
+        if not shelf.isVisible():
+            shelf.popup_at(QCursor.pos().x(), QCursor.pos().y())
+        else:
+            shelf.show()
+            shelf.raise_()
+            shelf.activateWindow()
+
+    def rename_shelf(self, shelf):
+        self.locate_shelf(shelf)
+        shelf.prompt_rename()
         
     def create_shelf(self):
         color = self.colors[(self.next_id - 1) % len(self.colors)]
@@ -129,8 +170,8 @@ class ShelfManager(QObject):
                 shelf.shelf_id = saved_id
             shelf.restore_from_state(state)
 
-            # 有內容或有釘選才自動顯示
-            if shelf.file_paths or shelf.is_pinned:
+            # 有內容、有自訂名稱或有釘選才自動顯示
+            if shelf.file_paths or shelf.is_pinned or shelf.custom_name:
                 shelf.show()
                 shelf.raise_()
 

@@ -41,8 +41,8 @@ class SessionManager:
         data = {"shelves": []}
         for shelf in shelves:
             state = shelf.get_state()
-            # 只儲存有內容或有釘選的架子
-            if state["items"] or state["is_pinned"]:
+            # 只儲存有內容、有釘選或有自訂名稱的架子
+            if state["items"] or state["is_pinned"] or state.get("name"):
                 data["shelves"].append(state)
 
         try:
