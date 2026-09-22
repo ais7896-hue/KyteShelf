@@ -85,6 +85,9 @@ class ShelfManager(QObject):
         act_show = self.tray_menu.addAction("顯示所有置物架")
         act_show.triggered.connect(self.show_all)
 
+        act_paste = self.tray_menu.addAction("📋 剪貼簿快速入架")
+        act_paste.triggered.connect(self.paste_clipboard_to_shelf)
+
         self.shelves_menu = self.tray_menu.addMenu("📑 置物架清單")
         self.tray_menu.aboutToShow.connect(self.update_tray_shelves_menu)
         self.tray_menu.addSeparator()
@@ -128,6 +131,9 @@ class ShelfManager(QObject):
             
             act_locate = sub_menu.addAction("👀 顯示 / 置頂")
             act_locate.triggered.connect(lambda checked=False, s=shelf: self.locate_shelf(s))
+
+            act_paste = sub_menu.addAction("📋 貼入剪貼簿內容")
+            act_paste.triggered.connect(lambda checked=False, s=shelf: self.paste_to_specific_shelf(s))
             
             act_rename = sub_menu.addAction("✏️ 重新命名...")
             act_rename.triggered.connect(lambda checked=False, s=shelf: self.rename_shelf(s))
@@ -147,6 +153,44 @@ class ShelfManager(QObject):
     def rename_shelf(self, shelf):
         self.locate_shelf(shelf)
         shelf.prompt_rename()
+
+    def paste_to_specific_shelf(self, shelf):
+        self.locate_shelf(shelf)
+        shelf.paste_from_clipboard()
+
+    def paste_clipboard_to_shelf(self):
+        target_shelf = None
+        for shelf in reversed(self.shelves):
+            if shelf.isVisible():
+                target_shelf = shelf
+                break
+
+        if not target_shelf:
+            for shelf in self.shelves:
+                if not shelf.isVisible():
+                    target_shelf = shelf
+                    break
+
+        if not target_shelf:
+            target_shelf = self.create_shelf()
+
+        cursor_pos = QCursor.pos()
+        target_shelf.popup_at(cursor_pos.x(), cursor_pos.y())
+        added = target_shelf.paste_from_clipboard()
+        if added > 0:
+            self.tray_icon.showMessage(
+                "KyteShelf",
+                f"已從剪貼簿加入 {added} 個項目至「{target_shelf.get_display_name()}」！",
+                QSystemTrayIcon.Information,
+                2000
+            )
+        else:
+            self.tray_icon.showMessage(
+                "KyteShelf",
+                "剪貼簿內無可貼入的內容",
+                QSystemTrayIcon.Warning,
+                2000
+            )
         
     def create_shelf(self):
         color = self.colors[(self.next_id - 1) % len(self.colors)]

@@ -1,21 +1,24 @@
 import os
+import re
+import html
 import time
 import zipfile
 import tempfile
 import subprocess
+import urllib.request
 from pathlib import Path
 
 from PySide6.QtCore import (
-    Qt, QSize, QEvent, QFileInfo, QPropertyAnimation, QEasingCurve
+    Qt, QSize, QEvent, QFileInfo, QPropertyAnimation, QEasingCurve, QTimer, QUrl
 )
 from PySide6.QtGui import (
-    QIcon, QPixmap, QColor, QBrush
+    QIcon, QPixmap, QColor, QBrush, QKeySequence, QImage, QShortcut, QImageReader
 )
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
     QListWidgetItem, QLabel, QPushButton, QLineEdit, QDialog, QMenu,
     QFileIconProvider, QGraphicsDropShadowEffect, 
-    QFileDialog, QMessageBox
+    QFileDialog, QMessageBox, QStackedWidget, QFrame
 )
 
 from .shelf_list import ShelfFileList
@@ -178,6 +181,7 @@ class EditableTitleLabel(QLabel):
             }
         """)
         shelf = self.window()
+        act_paste = menu.addAction("📋 貼上剪貼簿內容 (Ctrl+V)")
         act_rename = menu.addAction("✏️ 重新命名置物架...")
         menu.addSeparator()
         is_pinned = getattr(shelf, "is_pinned", False)
@@ -185,7 +189,9 @@ class EditableTitleLabel(QLabel):
         act_clear = menu.addAction("🗑️ 清空此置物架")
 
         action = menu.exec(event.globalPos())
-        if action == act_rename and hasattr(shelf, "prompt_rename"):
+        if action == act_paste and hasattr(shelf, "paste_from_clipboard"):
+            shelf.paste_from_clipboard()
+        elif action == act_rename and hasattr(shelf, "prompt_rename"):
             shelf.prompt_rename()
         elif action == act_pin and hasattr(shelf, "toggle_pin"):
             shelf.toggle_pin()
@@ -215,6 +221,81 @@ class KyteShelfWidget(QWidget):
 
         self.init_ui()
 
+    def _apply_container_style(self, is_drag_hover=False):
+        if is_drag_hover:
+            self.container.setStyleSheet(f"""
+                QWidget#Container {{
+                    background-color: #F0F9FF;
+                    border: 2px dashed {self.theme_color};
+                    border-radius: 14px;
+                }}
+            """)
+        else:
+            self.container.setStyleSheet("""
+                QWidget#Container {
+                    background-color: #FFFFFF;
+                    border: 1px solid #E2E8F0;
+                    border-radius: 14px;
+                }
+            """)
+
+    def _set_btn_disabled_style(self, btn):
+        btn.setStyleSheet("""
+            QPushButton {
+                background-color: #F8FAFC;
+                border: 1px solid #E2E8F0;
+                border-radius: 6px;
+                color: #CBD5E1;
+                font-size: 11px;
+                font-weight: 500;
+                padding: 3px 8px;
+                height: 22px;
+            }
+        """)
+
+    def _restore_toolbar_btn_style(self, btn):
+        btn.setStyleSheet("""
+            QPushButton {
+                background-color: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-radius: 6px;
+                color: #475569;
+                font-size: 11px;
+                font-weight: 500;
+                padding: 3px 8px;
+                height: 22px;
+            }
+            QPushButton:hover {
+                background-color: #F8FAFC;
+                border-color: #CBD5E1;
+                color: #0F172A;
+            }
+            QPushButton:pressed {
+                background-color: #F1F5F9;
+            }
+        """)
+
+    def _restore_clear_btn_style(self):
+        self.btn_clear.setStyleSheet("""
+            QPushButton {
+                background-color: #FFF5F5;
+                border: 1px solid #FED7D7;
+                border-radius: 6px;
+                color: #DC2626;
+                font-size: 11px;
+                font-weight: 600;
+                padding: 3px 8px;
+                height: 22px;
+            }
+            QPushButton:hover {
+                background-color: #FEE2E2;
+                border-color: #FEB2B2;
+            }
+            QPushButton:pressed {
+                background-color: #FECACA;
+            }
+        """)
+
     def init_ui(self):
         self.setWindowFlags(
             Qt.WindowStaysOnTopHint | 
@@ -223,7 +304,7 @@ class KyteShelfWidget(QWidget):
         )
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAcceptDrops(True)
-        self.resize(280, 360)
+        self.resize(320, 410)
 
         self.setStyleSheet("""
             QToolTip {
@@ -247,145 +328,337 @@ class KyteShelfWidget(QWidget):
 
         self.container = QWidget(self)
         self.container.setObjectName("Container")
-        self.container.setStyleSheet(f"""
-            QWidget#Container {{
-                background-color: #FFFFFF;
-                border: 1px solid #E2E8F0;
-                border-top: 4px solid {self.theme_color};
-                border-radius: 12px;
-            }}
-        """)
+        self._apply_container_style(is_drag_hover=False)
 
         shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(20)
-        shadow.setColor(QColor(0, 0, 0, 50))
-        shadow.setOffset(0, 4)
+        shadow.setBlurRadius(24)
+        shadow.setColor(QColor(15, 23, 42, 38))
+        shadow.setOffset(0, 6)
         self.container.setGraphicsEffect(shadow)
 
         container_layout = QVBoxLayout(self.container)
-        container_layout.setContentsMargins(10, 10, 10, 10)
-        container_layout.setSpacing(8)
+        container_layout.setContentsMargins(12, 9, 12, 11)
+        container_layout.setSpacing(9)
 
-        # 頂部控制列
+        # 頂部裝飾膠囊 Accent Handle
+        self.top_handle = QWidget(self.container)
+        self.top_handle.setFixedHeight(3)
+        self.top_handle.setFixedWidth(36)
+        self.top_handle.setStyleSheet(f"background-color: {self.theme_color}; border-radius: 1.5px;")
+
+        handle_layout = QHBoxLayout()
+        handle_layout.setContentsMargins(0, 0, 0, 0)
+        handle_layout.addStretch()
+        handle_layout.addWidget(self.top_handle)
+        handle_layout.addStretch()
+        container_layout.addLayout(handle_layout)
+
+        # 1. 頂部 Header 控制列
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(6)
+
+        title_box = QHBoxLayout()
+        title_box.setSpacing(6)
+
+        self.dot_indicator = QLabel("●", self.container)
+        self.dot_indicator.setStyleSheet(f"color: {self.theme_color}; font-size: 10px; margin-top: 1px;")
 
         self.title_label = EditableTitleLabel(self.get_display_name(), self)
         self.update_title_style()
 
-        # 新增按鈕
-        self.btn_new = QPushButton("＋", self)
+        self.count_badge = QLabel("0", self.container)
+        self.count_badge.setStyleSheet("""
+            background-color: #F1F5F9;
+            color: #64748B;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 1px 7px;
+            border-radius: 10px;
+        """)
+
+        title_box.addWidget(self.dot_indicator)
+        title_box.addWidget(self.title_label)
+        title_box.addWidget(self.count_badge)
+
+        icon_btn_style = """
+            QPushButton {
+                background: transparent;
+                border: none;
+                border-radius: 5px;
+                color: #64748B;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #F1F5F9;
+                color: #0F172A;
+            }
+            QPushButton:pressed {
+                background-color: #E2E8F0;
+            }
+        """
+
+        self.btn_new = QPushButton("＋", self.container)
         self.btn_new.setFixedSize(24, 24)
         self.btn_new.setCursor(Qt.PointingHandCursor)
         self.btn_new.setToolTip("新增置物架")
-        self.btn_new.setStyleSheet(f"border: none; background: transparent; font-size: 16px; color: {self.theme_color}; margin: 0 2px;")
+        self.btn_new.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                border: none;
+                border-radius: 5px;
+                color: #64748B;
+                font-size: 15px;
+                font-weight: bold;
+                padding-bottom: 1px;
+            }
+            QPushButton:hover {
+                background-color: #F1F5F9;
+                color: #0F172A;
+            }
+            QPushButton:pressed {
+                background-color: #E2E8F0;
+            }
+        """)
         if self.manager:
             self.btn_new.clicked.connect(self.manager.create_and_show_shelf)
 
-        # 打包成 ZIP 按鈕
-        self.btn_zip = QPushButton("📦", self)
-        self.btn_zip.setFixedSize(24, 24)
-        self.btn_zip.setCursor(Qt.PointingHandCursor)
-        self.btn_zip.setToolTip("將清單內所有檔案打包成 ZIP")
-        self.btn_zip.setStyleSheet("border: none; background: transparent; font-size: 12px;")
-        self.btn_zip.clicked.connect(self.zip_all_files)
-
-        # 釘選按鈕
-        self.btn_pin = QPushButton("📌", self)
+        self.btn_pin = QPushButton("📌", self.container)
         self.btn_pin.setFixedSize(24, 24)
         self.btn_pin.setCursor(Qt.PointingHandCursor)
         self.btn_pin.setToolTip("釘選視窗（點擊外部不關閉）")
-        self.btn_pin.setStyleSheet("border: none; background: transparent; font-size: 12px;")
+        self.btn_pin.setStyleSheet(icon_btn_style)
         self.btn_pin.clicked.connect(self.toggle_pin)
 
-        # 偏好設定按鈕
-        self.btn_settings = QPushButton("⚙️", self)
+        self.btn_settings = QPushButton("⚙", self.container)
         self.btn_settings.setFixedSize(24, 24)
         self.btn_settings.setCursor(Qt.PointingHandCursor)
         self.btn_settings.setToolTip("偏好設定")
-        self.btn_settings.setStyleSheet("border: none; background: transparent; font-size: 12px;")
+        self.btn_settings.setStyleSheet(icon_btn_style)
         if self.manager:
             self.btn_settings.clicked.connect(self.manager.open_settings)
 
-        # 模式切換按鈕
-        self.drag_mode = "copy"
-        self.btn_mode = QPushButton("複製", self)
-        self.btn_mode.setCursor(Qt.PointingHandCursor)
-        self.btn_mode.setStyleSheet("border: 1px solid #CBD5E1; border-radius: 4px; background: #E2E8F0; font-size: 11px; padding: 2px 4px; color: #334155; margin: 0 2px;")
-        self.btn_mode.setToolTip("點擊切換拖曳模式（複製/搬移）")
-        self.btn_mode.clicked.connect(self.toggle_drag_mode)
-
-        # 全選按鈕
-        self.btn_select_all = QPushButton("全選", self)
-        self.btn_select_all.setCursor(Qt.PointingHandCursor)
-        self.btn_select_all.setStyleSheet(f"border: none; color: {self.theme_color}; font-size: 12px; margin: 0 2px;")
-
-        # 清空按鈕
-        self.btn_clear = QPushButton("清空", self)
-        self.btn_clear.setCursor(Qt.PointingHandCursor)
-        self.btn_clear.setStyleSheet("border: none; color: #EF4444; font-size: 12px; margin: 0 2px;")
-        self.btn_clear.clicked.connect(self.clear_files)
-
-        # 關閉按鈕
-        self.btn_close = QPushButton("✕", self)
-        self.btn_close.setFixedSize(20, 20)
+        self.btn_close = QPushButton("✕", self.container)
+        self.btn_close.setFixedSize(24, 24)
         self.btn_close.setCursor(Qt.PointingHandCursor)
-        self.btn_close.setStyleSheet("border: none; color: #94A3B8; font-weight: bold; font-size: 13px;")
+        self.btn_close.setToolTip("關閉視窗 (Esc)")
+        self.btn_close.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                border: none;
+                border-radius: 5px;
+                color: #94A3B8;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #FEE2E2;
+                color: #EF4444;
+            }
+            QPushButton:pressed {
+                background-color: #FECACA;
+            }
+        """)
         self.btn_close.clicked.connect(self.hide)
 
-        header_layout.addWidget(self.title_label)
+        btn_box = QHBoxLayout()
+        btn_box.setSpacing(2)
+        btn_box.addWidget(self.btn_new)
+        btn_box.addWidget(self.btn_pin)
+        btn_box.addWidget(self.btn_settings)
+        btn_box.addWidget(self.btn_close)
+
+        header_layout.addLayout(title_box)
         header_layout.addStretch()
-        header_layout.addWidget(self.btn_new)
-        header_layout.addWidget(self.btn_mode)
-        header_layout.addWidget(self.btn_select_all)
-        header_layout.addWidget(self.btn_zip)
-        header_layout.addWidget(self.btn_pin)
-        header_layout.addWidget(self.btn_settings)
-        header_layout.addWidget(self.btn_clear)
-        header_layout.addWidget(self.btn_close)
+        header_layout.addLayout(btn_box)
         container_layout.addLayout(header_layout)
 
-        # 檔案清單
-        self.list_widget = ShelfFileList(self)
-        container_layout.addWidget(self.list_widget)
-        self.btn_select_all.clicked.connect(self.list_widget.selectAll)
+        # 2. 中間內容區（Empty State vs 檔案清單）
+        self.stack = QStackedWidget(self.container)
 
-        # 底部引導
-        self.hint_label = QLabel("拖入暫存 ｜ 拖出傳遞\n按住上方可拖移視窗", self)
-        self.hint_label.setAlignment(Qt.AlignCenter)
-        self.hint_label.setStyleSheet("color: #94A3B8; font-size: 11px; padding: 4px;")
-        container_layout.addWidget(self.hint_label)
+        # 頁面 0：Empty State 拖曳區
+        self.empty_page = QFrame()
+        self.empty_page.setStyleSheet("""
+            QFrame {
+                background-color: #F8FAFC;
+                border: 1.5px dashed #CBD5E1;
+                border-radius: 10px;
+            }
+        """)
+        empty_layout = QVBoxLayout(self.empty_page)
+        empty_layout.setContentsMargins(16, 20, 16, 16)
+        empty_layout.setSpacing(10)
+        empty_layout.setAlignment(Qt.AlignCenter)
+
+        icon_circle = QLabel("📥", self.empty_page)
+        icon_circle.setAlignment(Qt.AlignCenter)
+        icon_circle.setStyleSheet("""
+            background: #EDF7FD;
+            border: 1px solid #BAE6FD;
+            border-radius: 20px;
+            font-size: 20px;
+            padding: 8px;
+        """)
+        icon_circle.setFixedSize(46, 46)
+
+        text_title = QLabel("拖入檔案暫存 ｜ 拖出傳遞", self.empty_page)
+        text_title.setStyleSheet("color: #334155; font-size: 13px; font-weight: 600; border: none; background: transparent;")
+
+        text_sub = QLabel("支援各類檔案、圖片截圖、文字與網址", self.empty_page)
+        text_sub.setStyleSheet("color: #94A3B8; font-size: 11px; border: none; background: transparent;")
+
+        self.btn_paste_main = QPushButton("📋 貼上剪貼簿內容 (Ctrl+V)", self.empty_page)
+        self.btn_paste_main.setCursor(Qt.PointingHandCursor)
+        self.btn_paste_main.setStyleSheet(f"""
+            QPushButton {{
+                background-color: #FFFFFF;
+                border: 1px solid #CBD5E1;
+                border-radius: 7px;
+                color: #334155;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 6px 14px;
+            }}
+            QPushButton:hover {{
+                background-color: #F1F5F9;
+                border-color: {self.theme_color};
+                color: {self.theme_color};
+            }}
+            QPushButton:pressed {{
+                background-color: #E2E8F0;
+            }}
+        """)
+        self.btn_paste_main.clicked.connect(self.paste_from_clipboard)
+
+        empty_layout.addStretch()
+        empty_layout.addWidget(icon_circle, alignment=Qt.AlignCenter)
+        empty_layout.addWidget(text_title, alignment=Qt.AlignCenter)
+        empty_layout.addWidget(text_sub, alignment=Qt.AlignCenter)
+        empty_layout.addSpacing(2)
+        empty_layout.addWidget(self.btn_paste_main, alignment=Qt.AlignCenter)
+        empty_layout.addStretch()
+
+        # 頁面 1：檔案清單
+        self.list_widget = ShelfFileList(self)
+
+        self.stack.addWidget(self.empty_page)
+        self.stack.addWidget(self.list_widget)
+        self.stack.setCurrentIndex(0)
+        container_layout.addWidget(self.stack)
+
+        # 提示訊息條（Toast 反饋，預設隱藏）
+        self.toast_label = QLabel("", self.container)
+        self.toast_label.setAlignment(Qt.AlignCenter)
+        self.toast_label.setStyleSheet("color: #0284C7; font-weight: bold; font-size: 11px; padding: 2px;")
+        self.toast_label.setVisible(False)
+        self.hint_label = self.toast_label
+        container_layout.addWidget(self.toast_label)
+
+        # 3. 底部快捷工具列 (Footer Toolbar)
+        footer_layout = QHBoxLayout()
+        footer_layout.setContentsMargins(0, 1, 0, 0)
+        footer_layout.setSpacing(5)
+
+        self.drag_mode = "copy"
+        self.btn_mode = QPushButton("📋 複製模式", self.container)
+        self.btn_mode.setCursor(Qt.PointingHandCursor)
+        self.btn_mode.setToolTip("點擊切換拖曳模式：複製（拖出保留） / 搬移（拖出刪除）")
+        self.btn_mode.setStyleSheet("""
+            QPushButton {
+                background-color: #F1F5F9;
+                border: 1px solid #E2E8F0;
+                border-radius: 6px;
+                color: #475569;
+                font-size: 11px;
+                font-weight: 600;
+                padding: 3px 8px;
+                height: 22px;
+            }
+            QPushButton:hover {
+                background-color: #E2E8F0;
+                border-color: #CBD5E1;
+            }
+        """)
+        self.btn_mode.clicked.connect(self.toggle_drag_mode)
+
+        self.btn_paste = QPushButton("貼上", self.container)
+        self.btn_paste.setCursor(Qt.PointingHandCursor)
+        self.btn_paste.setToolTip("貼上剪貼簿內容 (Ctrl+V)")
+        self._restore_toolbar_btn_style(self.btn_paste)
+        self.btn_paste.clicked.connect(self.paste_from_clipboard)
+
+        self.btn_select_all = QPushButton("全選", self.container)
+        self.btn_select_all.setCursor(Qt.PointingHandCursor)
+        self.btn_select_all.setToolTip("全選項目 (Ctrl+A)")
+        self._restore_toolbar_btn_style(self.btn_select_all)
+        self.btn_select_all.clicked.connect(self.select_all_and_focus)
+
+        self.btn_zip = QPushButton("ZIP", self.container)
+        self.btn_zip.setCursor(Qt.PointingHandCursor)
+        self.btn_zip.setToolTip("將清單內所有檔案打包成 ZIP")
+        self._restore_toolbar_btn_style(self.btn_zip)
+        self.btn_zip.clicked.connect(self.zip_all_files)
+
+        self.btn_clear = QPushButton("清空", self.container)
+        self.btn_clear.setCursor(Qt.PointingHandCursor)
+        self.btn_clear.setToolTip("清空置物架所有內容")
+        self._restore_clear_btn_style()
+        self.btn_clear.clicked.connect(self.clear_files)
+
+        # 設定所有按鈕不奪取鍵盤焦點
+        for btn in (
+            self.btn_new, self.btn_pin, self.btn_settings, self.btn_close,
+            self.btn_paste_main, self.btn_mode, self.btn_paste,
+            self.btn_select_all, self.btn_zip, self.btn_clear
+        ):
+            btn.setFocusPolicy(Qt.NoFocus)
+
+        footer_layout.addWidget(self.btn_mode)
+        footer_layout.addStretch()
+        footer_layout.addWidget(self.btn_paste)
+        footer_layout.addWidget(self.btn_select_all)
+        footer_layout.addWidget(self.btn_zip)
+        footer_layout.addWidget(self.btn_clear)
+        container_layout.addLayout(footer_layout)
 
         main_layout.addWidget(self.container)
 
+        # 視窗全域快捷鍵守護
+        QShortcut(QKeySequence.Delete, self, activated=self.list_widget.delete_selected_items)
+        QShortcut(QKeySequence("Backspace"), self, activated=self.list_widget.delete_selected_items)
+        QShortcut(QKeySequence.Paste, self, activated=self.paste_from_clipboard)
+        QShortcut(QKeySequence("Ctrl+A"), self, activated=self.select_all_and_focus)
+
+    def select_all_and_focus(self):
+        """全選項目並將鍵盤焦點鎖定回清單"""
+        if self.list_widget.count() > 0:
+            self.list_widget.selectAll()
+            self.list_widget.setFocus()
+
     def update_title_style(self):
-        self.title_label.setStyleSheet(f"""
-            QLabel#ShelfTitleLabel {{
-                font-weight: bold;
-                color: {self.theme_color};
+        self.title_label.setStyleSheet("""
+            QLabel#ShelfTitleLabel {
+                color: #0F172A;
                 font-size: 13px;
+                font-weight: 700;
+                font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
                 padding: 2px 4px;
                 border-radius: 4px;
-            }}
-            QLabel#ShelfTitleLabel:hover {{
+            }
+            QLabel#ShelfTitleLabel:hover {
                 background-color: #F1F5F9;
-            }}
+            }
         """)
 
     def update_theme_color(self, new_color):
         """即時套用並更新主題色"""
         self.theme_color = new_color
-        self.container.setStyleSheet(f"""
-            QWidget#Container {{
-                background-color: #FFFFFF;
-                border: 1px solid #E2E8F0;
-                border-top: 4px solid {self.theme_color};
-                border-radius: 12px;
-            }}
-        """)
+        self._apply_container_style(is_drag_hover=False)
+        self.top_handle.setStyleSheet(f"background-color: {self.theme_color}; border-radius: 1.5px;")
+        self.dot_indicator.setStyleSheet(f"color: {self.theme_color}; font-size: 10px; margin-top: 1px;")
         self.update_title_style()
-        self.btn_new.setStyleSheet(f"border: none; background: transparent; font-size: 16px; color: {self.theme_color}; margin: 0 2px;")
-        self.btn_select_all.setStyleSheet(f"border: none; color: {self.theme_color}; font-size: 12px; margin: 0 2px;")
+        self.update_state()
 
     def zip_all_files(self):
         if not self.file_paths:
@@ -439,22 +712,85 @@ class KyteShelfWidget(QWidget):
         self.window_drag_pos = None
         super().mouseReleaseEvent(event)
 
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            self.hide()
+            event.accept()
+            return
+        elif event.key() in (Qt.Key_Delete, Qt.Key_Backspace):
+            if hasattr(self, "list_widget"):
+                self.list_widget.delete_selected_items()
+                event.accept()
+                return
+        elif event.matches(QKeySequence.Paste) or (event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_V):
+            self.paste_from_clipboard()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
     def toggle_pin(self):
         self.is_pinned = not self.is_pinned
         if self.is_pinned:
-            self.btn_pin.setStyleSheet("border: none; background: #E2E8F0; border-radius: 4px; font-size: 12px;")
+            self.btn_pin.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: #E0F2FE;
+                    border: 1px solid #BAE6FD;
+                    border-radius: 5px;
+                    font-size: 12px;
+                }}
+            """)
         else:
-            self.btn_pin.setStyleSheet("border: none; background: transparent; font-size: 12px;")
+            self.btn_pin.setStyleSheet("""
+                QPushButton {
+                    background: transparent;
+                    border: none;
+                    border-radius: 5px;
+                    color: #64748B;
+                    font-size: 12px;
+                }
+                QPushButton:hover {
+                    background-color: #F1F5F9;
+                    color: #0F172A;
+                }
+            """)
 
     def toggle_drag_mode(self):
         if self.drag_mode == "copy":
             self.drag_mode = "move"
-            self.btn_mode.setText("搬移")
-            self.btn_mode.setStyleSheet("border: 1px solid #FCA5A5; border-radius: 4px; background: #FEE2E2; font-size: 11px; padding: 2px 4px; color: #991B1B; margin: 0 2px;")
+            self.btn_mode.setText("🚚 搬移模式")
+            self.btn_mode.setStyleSheet("""
+                QPushButton {
+                    background-color: #FEF2F2;
+                    border: 1px solid #FCA5A5;
+                    border-radius: 6px;
+                    color: #DC2626;
+                    font-size: 11px;
+                    font-weight: 600;
+                    padding: 3px 8px;
+                    height: 22px;
+                }
+                QPushButton:hover {
+                    background-color: #FEE2E2;
+                }
+            """)
         else:
             self.drag_mode = "copy"
-            self.btn_mode.setText("複製")
-            self.btn_mode.setStyleSheet("border: 1px solid #CBD5E1; border-radius: 4px; background: #E2E8F0; font-size: 11px; padding: 2px 4px; color: #334155; margin: 0 2px;")
+            self.btn_mode.setText("📋 複製模式")
+            self.btn_mode.setStyleSheet("""
+                QPushButton {
+                    background-color: #F1F5F9;
+                    border: 1px solid #E2E8F0;
+                    border-radius: 6px;
+                    color: #475569;
+                    font-size: 11px;
+                    font-weight: 600;
+                    padding: 3px 8px;
+                    height: 22px;
+                }
+                QPushButton:hover {
+                    background-color: #E2E8F0;
+                }
+            """)
 
     def changeEvent(self, event):
         if event.type() == QEvent.Type.ActivationChange:
@@ -463,53 +799,96 @@ class KyteShelfWidget(QWidget):
                     self.hide()
         super().changeEvent(event)
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape:
-            self.hide()
-        else:
-            super().keyPressEvent(event)
-
     def dragEnterEvent(self, event):
         mime = event.mimeData()
-        if mime.hasUrls() or mime.hasText():
+        if mime.hasUrls() or mime.hasText() or mime.hasImage():
             event.acceptProposedAction()
-            self.container.setStyleSheet(f"""
-                QWidget#Container {{
-                    background-color: #F0F9FF;
-                    border: 2px dashed {self.theme_color};
-                    border-radius: 12px;
-                }}
-            """)
+            self._apply_container_style(is_drag_hover=True)
 
     def dragLeaveEvent(self, event):
-        self.container.setStyleSheet(f"""
-            QWidget#Container {{
-                background-color: #FFFFFF;
-                border: 1px solid #E2E8F0;
-                border-top: 4px solid {self.theme_color};
-                border-radius: 12px;
-            }}
-        """)
+        self._apply_container_style(is_drag_hover=False)
+
+    def _is_image_url(self, url_str: str) -> bool:
+        """判定 URL 是否為常見圖片檔案格式"""
+        try:
+            path = QUrl(url_str).path().lower()
+            image_exts = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".svg")
+            return any(path.endswith(ext) for ext in image_exts)
+        except Exception:
+            return False
+
+    def _download_and_add_remote_image(self, url_str: str) -> bool:
+        """嘗試下載遠端網頁圖片，自動保存為本機實體圖片檔並入架"""
+        try:
+            req = urllib.request.Request(
+                url_str,
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+            )
+            with urllib.request.urlopen(req, timeout=3.5) as resp:
+                data = resp.read()
+                img = QImage()
+                if img.loadFromData(data):
+                    ts = int(time.time() * 1000)
+                    parsed_path = Path(QUrl(url_str).path())
+                    ext = parsed_path.suffix.lower()
+                    if ext not in [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"]:
+                        ext = ".png"
+                    img_path = self.temp_dir / f"web_image_{ts}{ext}"
+                    with open(img_path, "wb") as f:
+                        f.write(data)
+                    self.add_file_item(str(img_path))
+                    return True
+        except Exception:
+            pass
+        return False
 
     def dropEvent(self, event):
         self.dragLeaveEvent(None)
         mime = event.mimeData()
         has_handled = False
-        
-        if mime.hasUrls():
+
+        # 1. 優先處理直接攜帶圖片點陣圖的拖曳數據（如某些瀏覽器或圖形軟體）
+        if mime.hasImage():
+            image = mime.imageData()
+            if image and isinstance(image, QImage) and not image.isNull():
+                ts = int(time.time() * 1000)
+                img_path = self.temp_dir / f"drop_image_{ts}.png"
+                if image.save(str(img_path), "PNG"):
+                    self.add_file_item(str(img_path))
+                    has_handled = True
+
+        # 2. 檢查 URLs（本機檔案 vs 網址）
+        if not has_handled and mime.hasUrls():
             for url in mime.urls():
                 if url.isLocalFile():
-                    path = url.toLocalFile()
+                    path = os.path.normpath(url.toLocalFile())
                     if path and path not in self.file_paths:
                         self.add_file_item(path)
                         has_handled = True
                 elif url.scheme() in ["http", "https"]:
-                    self.add_sticky_note(url.toString(), note_type="url")
+                    url_str = url.toString()
+                    # 判斷是否為網頁圖片 URL，若是則自動下載為實體圖片！
+                    if self._is_image_url(url_str) and self._download_and_add_remote_image(url_str):
+                        has_handled = True
+                    else:
+                        self.add_sticky_note(url_str, note_type="url")
+                        has_handled = True
+
+        # 3. 檢查 HTML 是否包含 <img> 圖片標籤
+        if not has_handled and mime.hasHtml():
+            m = re.search(r'<img[^>]+src=["\'](https?://[^"\']+)["\']', mime.html(), re.IGNORECASE)
+            if m:
+                if self._download_and_add_remote_image(m.group(1)):
                     has_handled = True
-                    
+
+        # 4. 純文字降級處理
         if not has_handled and mime.hasText():
-            self.add_sticky_note(mime.text(), note_type="text")
-            
+            text = mime.text().strip()
+            if self._is_image_url(text) and self._download_and_add_remote_image(text):
+                has_handled = True
+            else:
+                self.add_sticky_note(mime.text(), note_type="text")
+
         event.acceptProposedAction()
 
     def add_sticky_note(self, content: str, note_type: str = "text"):
@@ -569,7 +948,84 @@ class KyteShelfWidget(QWidget):
     def create_temp_text_file(self, text: str):
         self.add_sticky_note(text, note_type="text")
 
+    def _create_file_tooltip(self, path_str: str) -> str:
+        """為檔案建立現代美觀的 ToolTip，若是圖片則包含尺寸資訊與縮圖預覽"""
+        path = Path(path_str)
+        clean_name = html.escape(path.name)
+        file_url = html.escape(QUrl.fromLocalFile(path_str).toString())
+
+        # 格式化檔案路徑（適度折行，避免橫向過寬）
+        parts = path_str.replace('\\', '/').split('/')
+        path_lines = []
+        curr = ""
+        for part in parts:
+            if curr:
+                if len(curr) + len(part) + 1 > 38:
+                    path_lines.append(curr + "/")
+                    curr = part
+                else:
+                    curr += "/" + part
+            else:
+                curr = part
+        if curr:
+            path_lines.append(curr)
+        formatted_path = "<br/>".join(html.escape(l) for l in path_lines)
+
+        size_str = ""
+        try:
+            if path.exists():
+                size_bytes = path.stat().st_size
+                if size_bytes < 1024:
+                    size_str = f"{size_bytes} B"
+                elif size_bytes < 1024 * 1024:
+                    size_str = f"{size_bytes / 1024:.1f} KB"
+                elif size_bytes < 1024 * 1024 * 1024:
+                    size_str = f"{size_bytes / (1024 * 1024):.1f} MB"
+                else:
+                    size_str = f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+        except Exception:
+            pass
+
+        img_exts = {".png", ".jpg", ".jpeg", ".bmp", ".webp", ".gif", ".ico", ".svg", ".jfif", ".tif", ".tiff"}
+        if path.suffix.lower() in img_exts and path.exists():
+            reader = QImageReader(path_str)
+            sz = reader.size()
+            w, h = sz.width(), sz.height()
+            if w > 0 and h > 0:
+                max_w, max_h = 240, 180
+                scale = min(max_w / w, max_h / h, 1.0)
+                disp_w = max(1, int(w * scale))
+                disp_h = max(1, int(h * scale))
+                img_html = f'<div style="margin: 6px 0; text-align: center;"><img src="{file_url}" width="{disp_w}" height="{disp_h}" /></div>'
+                dim_info = f"{w} &times; {h} px &bull; "
+            else:
+                img_html = f'<div style="margin: 6px 0; text-align: center;"><img src="{file_url}" width="200" /></div>'
+                dim_info = ""
+
+            meta_info = f"{dim_info}{size_str}".strip(" \u2022&bull;")
+            meta_line = f'<div style="font-size: 11px; color: #94A3B8; text-align: center;">{meta_info}</div>' if meta_info else ""
+
+            return f"""<html><body>
+<div style="font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif; max-width: 260px;">
+    <div style="font-weight: bold; font-size: 12px; color: #F8FAFC; word-break: break-all; margin-bottom: 2px;">{clean_name}</div>
+    {img_html}
+    {meta_line}
+</div>
+</body></html>"""
+        else:
+            info_line = f"<span>{size_str}</span><br/>" if size_str else ""
+            return f"""<html><body>
+<div style="font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif; max-width: 280px;">
+    <div style="font-weight: bold; font-size: 12px; color: #F8FAFC; word-break: break-all; margin-bottom: 2px;">{clean_name}</div>
+    <div style="font-size: 11px; color: #94A3B8; line-height: 1.4;">
+        {info_line}
+        <span style="color: #64748B; font-size: 10px;">{formatted_path}</span>
+    </div>
+</div>
+</body></html>"""
+
     def add_file_item(self, path_str: str):
+        path_str = os.path.normpath(path_str)
         if path_str in self.file_paths:
             return
             
@@ -578,11 +1034,11 @@ class KyteShelfWidget(QWidget):
 
         item = QListWidgetItem()
         item.setText(path.name)
-        item.setToolTip(path_str)
+        item.setToolTip(self._create_file_tooltip(path_str))
         item.setData(Qt.UserRole, path_str)
         item.setSizeHint(QSize(0, 44))
 
-        if path.suffix.lower() in [".png", ".jpg", ".jpeg", ".bmp", ".webp"]:
+        if path.suffix.lower() in [".png", ".jpg", ".jpeg", ".bmp", ".webp", ".gif", ".ico", ".svg", ".jfif"]:
             pix = QPixmap(path_str)
             if not pix.isNull():
                 pix = pix.scaled(32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -594,6 +1050,107 @@ class KyteShelfWidget(QWidget):
 
         self.list_widget.addItem(item)
         self.update_state()
+
+    def paste_from_clipboard(self) -> int:
+        """從系統剪貼簿讀取檔案、圖片、文字或網址並加入置物架，回傳加入的項目數量"""
+        clipboard = QApplication.clipboard()
+        mime = clipboard.mimeData()
+        added_count = 0
+
+        # 1. 優先檢查是否為本機實體檔案 (Local Files)
+        local_files = []
+        if mime.hasUrls():
+            for url in mime.urls():
+                if url.isLocalFile():
+                    path = os.path.normpath(url.toLocalFile())
+                    if path and path not in self.file_paths and Path(path).exists():
+                        local_files.append(path)
+
+        if local_files:
+            for p in local_files:
+                self.add_file_item(p)
+                added_count += 1
+            self.update_state()
+            if self.manager:
+                self.manager.save_session()
+            self.show_temporary_hint(f"📋 已從剪貼簿貼入 {added_count} 個檔案！")
+            return added_count
+
+        # 2. 核心修復：優先檢查剪貼簿中的實體影像 (Image)
+        # （當使用者在網頁右鍵點選「複製影像」，或使用 Windows 截圖時，瀏覽器會放入解碼後的 QImage）
+        image = clipboard.image()
+        if not image.isNull():
+            ts = int(time.time() * 1000)
+            img_path = self.temp_dir / f"clip_image_{ts}.png"
+            if image.save(str(img_path), "PNG"):
+                self.add_file_item(str(img_path))
+                added_count += 1
+                self.update_state()
+                if self.manager:
+                    self.manager.save_session()
+                self.show_temporary_hint("📋 已貼入 1 張圖片檔案！")
+                return added_count
+
+        # 3. 若無實體點陣圖，檢查 HTTP/HTTPS 網址（是否為遠端圖片網址）
+        if mime.hasUrls():
+            for url in mime.urls():
+                if url.scheme() in ["http", "https"]:
+                    url_str = url.toString()
+                    if self._is_image_url(url_str) and self._download_and_add_remote_image(url_str):
+                        added_count += 1
+                    else:
+                        self.add_sticky_note(url_str, note_type="url")
+                        added_count += 1
+
+        # 4. 檢查 HTML 中是否含有 <img> 圖片
+        if added_count == 0 and mime.hasHtml():
+            m = re.search(r'<img[^>]+src=["\'](https?://[^"\']+)["\']', mime.html(), re.IGNORECASE)
+            if m:
+                if self._download_and_add_remote_image(m.group(1)):
+                    added_count += 1
+
+        # 5. 檢查純文字（多行本地路徑 vs 圖片網址 vs 一般文字/網址）
+        if added_count == 0 and mime.hasText():
+            text = mime.text().strip()
+            if text:
+                lines = [l.strip().strip('"') for l in text.splitlines() if l.strip()]
+                all_valid_files = len(lines) > 0 and all(Path(l).exists() for l in lines)
+                if all_valid_files:
+                    for l in lines:
+                        if l not in self.file_paths:
+                            self.add_file_item(l)
+                            added_count += 1
+                else:
+                    if text.startswith(("http://", "https://")) and "\n" not in text:
+                        if self._is_image_url(text) and self._download_and_add_remote_image(text):
+                            added_count += 1
+                        else:
+                            self.add_sticky_note(text, note_type="url")
+                            added_count += 1
+                    else:
+                        self.add_sticky_note(text, note_type="text")
+                        added_count += 1
+
+        if added_count > 0:
+            self.update_state()
+            if self.manager:
+                self.manager.save_session()
+            self.show_temporary_hint(f"📋 已從剪貼簿貼入 {added_count} 個項目！")
+        else:
+            self.show_temporary_hint("⚠️ 剪貼簿內無可貼入的內容", is_warning=True)
+
+        return added_count
+
+    def show_temporary_hint(self, text: str, duration_ms: int = 2200, is_warning: bool = False):
+        """短暫在提示列顯示操作反饋"""
+        color = "#EF4444" if is_warning else self.theme_color
+        self.toast_label.setText(text)
+        self.toast_label.setStyleSheet(f"color: {color}; font-weight: bold; font-size: 11px; padding: 2px;")
+        self.toast_label.setVisible(True)
+        QTimer.singleShot(duration_ms, self._restore_hint)
+
+    def _restore_hint(self):
+        self.toast_label.setVisible(False)
 
     def clear_files(self):
         for path_str in list(self.file_paths):
@@ -703,8 +1260,41 @@ class KyteShelfWidget(QWidget):
     def update_state(self):
         count = len(self.file_paths)
         display_name = self.get_display_name()
-        self.title_label.setText(f"{display_name} ({count})")
-        self.hint_label.setVisible(count == 0)
+        self.title_label.setText(display_name)
+        self.count_badge.setText(str(count))
+
+        if count == 0:
+            self.stack.setCurrentIndex(0)
+            self.count_badge.setStyleSheet("""
+                background-color: #F1F5F9;
+                color: #64748B;
+                font-size: 11px;
+                font-weight: 600;
+                padding: 1px 7px;
+                border-radius: 10px;
+            """)
+            self.btn_select_all.setEnabled(False)
+            self.btn_zip.setEnabled(False)
+            self.btn_clear.setEnabled(False)
+            self._set_btn_disabled_style(self.btn_select_all)
+            self._set_btn_disabled_style(self.btn_zip)
+            self._set_btn_disabled_style(self.btn_clear)
+        else:
+            self.stack.setCurrentIndex(1)
+            self.count_badge.setStyleSheet(f"""
+                background-color: #E0F2FE;
+                color: {self.theme_color};
+                font-size: 11px;
+                font-weight: 700;
+                padding: 1px 7px;
+                border-radius: 10px;
+            """)
+            self.btn_select_all.setEnabled(True)
+            self.btn_zip.setEnabled(True)
+            self.btn_clear.setEnabled(True)
+            self._restore_toolbar_btn_style(self.btn_select_all)
+            self._restore_toolbar_btn_style(self.btn_zip)
+            self._restore_clear_btn_style()
 
     def popup_at(self, x: int, y: int):
         screen_rect = QApplication.primaryScreen().availableGeometry()

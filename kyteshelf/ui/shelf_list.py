@@ -5,14 +5,63 @@ import time
 import webbrowser
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QPoint, QSize, QUrl, QMimeData
-from PySide6.QtGui import QDrag, QDesktopServices, QImage, QCursor
+from PySide6.QtCore import Qt, QPoint, QSize, QUrl, QMimeData, QRect
+from PySide6.QtGui import (
+    QDrag, QDesktopServices, QImage, QCursor, QKeySequence, 
+    QPainter, QPen, QBrush, QColor
+)
 from PySide6.QtWidgets import (
-    QApplication, QListWidget, QMenu, QMessageBox
+    QApplication, QListWidget, QMenu, QMessageBox, QStyledItemDelegate
 )
 
 from .sticky_note import StickyNoteWindow
 
+
+class ShelfItemDelegate(QStyledItemDelegate):
+    """自訂 Delegate：在項目右側繪製精緻的單獨刪除 ✕ 按鈕"""
+    def __init__(self, parent_list):
+        super().__init__(parent_list)
+        self.list_widget = parent_list
+
+    def paint(self, painter: QPainter, option, index):
+        super().paint(painter, option, index)
+
+        row = index.row()
+        item = self.list_widget.item(row)
+        is_hovered_item = (self.list_widget.hovered_row == row)
+        is_selected = item.isSelected() if item else False
+
+        # 當滑鼠懸停於此項目，或此項目已被選取時，顯示右側刪除按鈕
+        if is_hovered_item or is_selected:
+            painter.save()
+            painter.setRenderHint(QPainter.Antialiasing)
+
+            btn_rect = self.list_widget.get_close_btn_rect(option.rect)
+            is_btn_hovered = (self.list_widget.hovered_close_btn_row == row)
+
+            if is_btn_hovered:
+                bg_color = QColor("#FEE2E2")  # 淺紅色背景
+                fg_color = QColor("#EF4444")  # 紅色 ✕
+            else:
+                bg_color = QColor("#F1F5F9")  # 淺灰色背景
+                fg_color = QColor("#94A3B8")  # 灰色 ✕
+
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QBrush(bg_color))
+            painter.drawEllipse(btn_rect)
+
+            # 繪製 ✕ 符號
+            painter.setPen(QPen(fg_color, 1.6, Qt.SolidLine, Qt.RoundCap))
+            m = 5
+            painter.drawLine(
+                btn_rect.left() + m, btn_rect.top() + m,
+                btn_rect.right() - m, btn_rect.bottom() - m
+            )
+            painter.drawLine(
+                btn_rect.right() - m, btn_rect.top() + m,
+                btn_rect.left() + m, btn_rect.bottom() - m
+            )
+            painter.restore()
 
 
 class ShelfFileList(QListWidget):
@@ -25,6 +74,11 @@ class ShelfFileList(QListWidget):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.open_menu)
         self.itemDoubleClicked.connect(self.open_file)
+
+        self.hovered_row = -1
+        self.hovered_close_btn_row = -1
+        self.setMouseTracking(True)
+        self.setItemDelegate(ShelfItemDelegate(self))
 
         self.drag_start_pos = None
         self._reorder_mode = False
@@ -41,7 +95,7 @@ class ShelfFileList(QListWidget):
                 background: #FFFFFF;
                 border: 1px solid #E2E8F0;
                 border-radius: 6px;
-                padding: 4px 8px;
+                padding: 4px 28px 4px 8px;
                 color: #1E293B;
             }
             QListWidget::item:hover {
@@ -116,53 +170,169 @@ class ShelfFileList(QListWidget):
                 self.shelf_window.active_notes = []
             self.shelf_window.active_notes.append(note_win)
 
+    def get_close_btn_rect(self, item_rect: QRect) -> QRect:
+        """計算單獨項目右側 ✕ 刪除按鈕的幾何區域"""
+        btn_size = 18
+        x = item_rect.right() - btn_size - 8
+        y = item_rect.top() + (item_rect.height() - btn_size) // 2
+        return QRect(x, y, btn_size, btn_size)
+
+    def leaveEvent(self, event):
+        self.hovered_row = -1
+        self.hovered_close_btn_row = -1
+        self.viewport().update()
+        super().leaveEvent(event)
+
+    def delete_item(self, item):
+        """單獨刪除指定項目"""
+        if not item:
+            return
+        path_str = item.data(Qt.UserRole)
+        if self.shelf_window:
+            if path_str in self.shelf_window.file_paths:
+                self.shelf_window.file_paths.remove(path_str)
+            self.shelf_window._delete_temp_if_sticky(path_str)
+        self.takeItem(self.row(item))
+        self.hovered_row = -1
+        self.hovered_close_btn_row = -1
+        if self.shelf_window:
+            self.shelf_window.update_state()
+            if hasattr(self.shelf_window, "show_temporary_hint"):
+                self.shelf_window.show_temporary_hint("🗑️ 已從置物架移除項目")
+            if self.shelf_window.manager:
+                self.shelf_window.manager.save_session()
+
+    def delete_selected_items(self):
+        """批次或單獨刪除所有目前選取的項目（支援 Delete/Backspace 鍵）"""
+        selected_items = self.selectedItems()
+        if not selected_items:
+            return
+        count = len(selected_items)
+        for item in selected_items:
+            path_str = item.data(Qt.UserRole)
+            if self.shelf_window:
+                if path_str in self.shelf_window.file_paths:
+                    self.shelf_window.file_paths.remove(path_str)
+                self.shelf_window._delete_temp_if_sticky(path_str)
+            self.takeItem(self.row(item))
+
+        self.hovered_row = -1
+        self.hovered_close_btn_row = -1
+        if self.shelf_window:
+            self.shelf_window.update_state()
+            if hasattr(self.shelf_window, "show_temporary_hint"):
+                self.shelf_window.show_temporary_hint(f"🗑️ 已從置物架移除 {count} 個項目")
+            if self.shelf_window.manager:
+                self.shelf_window.manager.save_session()
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key_Delete, Qt.Key_Backspace):
+            self.delete_selected_items()
+            event.accept()
+            return
+        elif event.matches(QKeySequence.Paste) or (event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_V):
+            if self.shelf_window and hasattr(self.shelf_window, "paste_from_clipboard"):
+                self.shelf_window.paste_from_clipboard()
+                event.accept()
+                return
+        super().keyPressEvent(event)
+
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self.drag_start_pos = event.position().toPoint()
-            item = self.itemAt(event.position().toPoint())
+            pos = event.position().toPoint()
+            item = self.itemAt(pos)
+            # 點擊右側 ✕ 按鈕時直接觸發單獨刪除
+            if item:
+                btn_rect = self.get_close_btn_rect(self.visualItemRect(item))
+                if btn_rect.contains(pos):
+                    self.delete_item(item)
+                    event.accept()
+                    return
+
+            self.drag_start_pos = pos
             self.drag_start_row = self.row(item) if item else -1
             self._reorder_mode = False
             self._reorder_current_row = -1
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        local_pos = event.position().toPoint()
+
+        # 更新懸停位置以即時重繪 ✕ 刪除按鈕
+        item = self.itemAt(local_pos)
+        new_hover_row = self.row(item) if item else -1
+        new_close_row = -1
+        if item:
+            if self.get_close_btn_rect(self.visualItemRect(item)).contains(local_pos):
+                new_close_row = new_hover_row
+
+        if new_hover_row != self.hovered_row or new_close_row != self.hovered_close_btn_row:
+            self.hovered_row = new_hover_row
+            self.hovered_close_btn_row = new_close_row
+            self.viewport().update()
+
         if not (event.buttons() & Qt.LeftButton) or not self.drag_start_pos:
             super().mouseMoveEvent(event)
             return
 
-        if (event.position().toPoint() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
-            return
-
         local_pos = event.position().toPoint()
-        is_inside = self.rect().contains(local_pos)
+        delta = local_pos - self.drag_start_pos
+        dx = abs(delta.x())
+        dy = abs(delta.y())
 
-        # --- 列表內拖曳排序 ---
-        # 啟動條件：目標在列表內 + 單選 + 點擊起始於有效項目上
-        if is_inside and not self._reorder_mode and self.drag_start_row >= 0:
-            selected = self.selectedItems()
-            if len(selected) <= 1:
-                self._reorder_mode = True
-                self._reorder_current_row = self.drag_start_row
-                self.setCursor(Qt.SizeVerCursor)
-
-        if self._reorder_mode:
-            if is_inside:
-                target_row = self._get_target_row(local_pos.y())
-                # 逐步向目標交換，達到連續動第複製的被拖動物件實時移動
-                while self._reorder_current_row > target_row and self._reorder_current_row > 0:
-                    self._swap_rows(self._reorder_current_row - 1, self._reorder_current_row)
-                    self._reorder_current_row -= 1
-                while self._reorder_current_row < target_row and self._reorder_current_row < self.count() - 1:
-                    self._swap_rows(self._reorder_current_row, self._reorder_current_row + 1)
-                    self._reorder_current_row += 1
-                self.setCurrentRow(self._reorder_current_row)
-            # 還在拖曳中，不論達到边界外就働住（不切換為外部拖曳）
+        if delta.manhattanLength() < QApplication.startDragDistance():
             return
 
-        # --- 外部拖曳（拖入其他應用程式） ---
+        is_inside = self.rect().contains(local_pos)
         selected_items = self.selectedItems()
         if not selected_items:
             super().mouseMoveEvent(event)
+            return
+
+        # 多選項目直接進入外部拖曳
+        if len(selected_items) > 1:
+            self._reorder_mode = False
+            self.unsetCursor()
+            self._start_external_drag(selected_items)
+            return
+
+        # 尚未進入排序模式時：判斷是要「列表內上下排序」還是「往外拖曳」
+        if not self._reorder_mode:
+            # 只有當位移仍在列表內、且垂直移動明顯大於水平位移 (dy > dx * 1.2) 時才進入排序模式
+            if is_inside and self.drag_start_row >= 0 and dy > dx * 1.2:
+                self._reorder_mode = True
+                self._reorder_current_row = self.drag_start_row
+                self.setCursor(Qt.SizeVerCursor)
+            else:
+                # 橫向拖拉或直接拖出邊界 -> 直接啟動外部拖曳！
+                self._start_external_drag(selected_items)
+                return
+
+        # 若已處於排序模式：
+        if self._reorder_mode:
+            # 一旦使用者將滑鼠移出列表，或產生明顯橫向拖出意圖 (dx > 30) -> 立即無縫切換為外部拖曳！
+            if not is_inside or dx > 30:
+                self._reorder_mode = False
+                self._reorder_current_row = -1
+                self.drag_start_row = -1
+                self.unsetCursor()
+                self._start_external_drag(selected_items)
+                return
+
+            # 在列表內部即時交換順序
+            target_row = self._get_target_row(local_pos.y())
+            while self._reorder_current_row > target_row and self._reorder_current_row > 0:
+                self._swap_rows(self._reorder_current_row - 1, self._reorder_current_row)
+                self._reorder_current_row -= 1
+            while self._reorder_current_row < target_row and self._reorder_current_row < self.count() - 1:
+                self._swap_rows(self._reorder_current_row, self._reorder_current_row + 1)
+                self._reorder_current_row += 1
+            self.setCurrentRow(self._reorder_current_row)
+            return
+
+    def _start_external_drag(self, selected_items):
+        """執行系統級拖曳，將檔案或文字拖放至外部應用程式"""
+        if not selected_items:
             return
 
         if self.shelf_window:
@@ -270,6 +440,7 @@ class ShelfFileList(QListWidget):
                     color: #0284C7;
                 }
             """)
+            act_paste = menu.addAction("📋 貼上剪貼簿內容 (Ctrl+V)")
             act_rename = menu.addAction("✏️ 重新命名置物架...")
             menu.addSeparator()
             is_pinned = getattr(self.shelf_window, "is_pinned", False)
@@ -277,7 +448,9 @@ class ShelfFileList(QListWidget):
             act_clear = menu.addAction("🗑️ 清空置物架")
 
             action = menu.exec(self.mapToGlobal(pos))
-            if action == act_rename and hasattr(self.shelf_window, "prompt_rename"):
+            if action == act_paste and hasattr(self.shelf_window, "paste_from_clipboard"):
+                self.shelf_window.paste_from_clipboard()
+            elif action == act_rename and hasattr(self.shelf_window, "prompt_rename"):
                 self.shelf_window.prompt_rename()
             elif action == act_pin and hasattr(self.shelf_window, "toggle_pin"):
                 self.shelf_window.toggle_pin()
@@ -305,6 +478,9 @@ class ShelfFileList(QListWidget):
                 act_copy_content = menu.addAction("📋 複製文字內容")
             menu.addSeparator()
 
+        act_paste = menu.addAction("📋 貼上剪貼簿內容 (Ctrl+V)")
+        menu.addSeparator()
+
         act_show = menu.addAction("在檔案總管中顯示")
         act_copy_path = menu.addAction("複製路徑")
         act_zip = menu.addAction("全部打包成 ZIP")
@@ -329,7 +505,9 @@ class ShelfFileList(QListWidget):
             act_img_convert_png = None
 
         menu.addSeparator()
-        act_delete = menu.addAction("從置物架移除")
+        sel_count = len(self.selectedItems())
+        del_label = f"🗑️ 從置物架移除 ({sel_count} 項) (Delete)" if sel_count > 1 else "🗑️ 從置物架移除 (Delete)"
+        act_delete = menu.addAction(del_label)
 
         action = menu.exec(self.mapToGlobal(pos))
         if act_open_note and action == act_open_note:
@@ -342,6 +520,8 @@ class ShelfFileList(QListWidget):
                 if not url.startswith(("http://", "https://")):
                     url = "https://" + url
                 webbrowser.open(url)
+        elif action == act_paste and hasattr(self.shelf_window, "paste_from_clipboard"):
+            self.shelf_window.paste_from_clipboard()
         elif action == act_show:
             norm_path = os.path.normpath(path_str)
             subprocess.run(f'explorer /select,"{norm_path}"')
@@ -358,11 +538,7 @@ class ShelfFileList(QListWidget):
         elif action == act_img_convert_png:
             self.process_images(self.selectedItems(), "convert_png")
         elif action == act_delete:
-            if path_str in self.shelf_window.file_paths:
-                self.shelf_window.file_paths.remove(path_str)
-            self.shelf_window._delete_temp_if_sticky(path_str)
-            self.takeItem(self.row(item))
-            self.shelf_window.update_state()
+            self.delete_selected_items()
 
     def attach_to_outlook(self):
         selected_items = self.selectedItems()
