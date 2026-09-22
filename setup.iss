@@ -1,12 +1,12 @@
 ; ==========================================
-; DropShelf - Inno Setup 打包腳本
+; KyteShelf - Inno Setup 打包腳本
 ; ==========================================
 
-#define MyAppName "DropShelf"
+#define MyAppName "KyteShelf"
 #define MyAppVersion "1.0.2"
 #define MyAppPublisher "ais7896-hue"
-#define MyAppURL "https://github.com/ais7896-hue/DropShelf"
-#define MyAppExeName "DropShelf.exe"
+#define MyAppURL "https://github.com/ais7896-hue/KyteShelf"
+#define MyAppExeName "KyteShelf.exe"
 
 [Setup]
 ; 應用程式基本資訊
@@ -31,7 +31,7 @@ LicenseFile=LICENSE
 
 ; 輸出設定
 OutputDir=Output
-OutputBaseFilename=DropShelf_Setup_v{#MyAppVersion}
+OutputBaseFilename=KyteShelf_Setup_v{#MyAppVersion}
 SetupIconFile=icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
@@ -43,7 +43,7 @@ SolidCompression=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 
-; 安裝與更新時自動偵測並關閉正在背景常駐的 DropShelf，避免檔案被佔用
+; 安裝與更新時自動偵測並關閉正在背景常駐的 KyteShelf，避免檔案被佔用
 CloseApplications=yes
 CloseApplicationsFilter=*.exe
 
@@ -61,8 +61,8 @@ Name: "startup"; Description: "開機時自動啟動置物架（常駐系統匣�
 ; 要打包進安裝包的檔案清單
 ; ==========================================
 [Files]
-; 來源為 PyInstaller 打包產出的 dist\DropShelf 目錄
-Source: "dist\DropShelf\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; 來源為 PyInstaller 打包產出的 dist\KyteShelf 目錄
+Source: "dist\KyteShelf\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; ==========================================
 ; 捷徑建立設定

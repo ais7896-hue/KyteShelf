@@ -8,9 +8,10 @@ from PySide6.QtWidgets import (
 )
 
 from ..config import ConfigManager
+from ..session import SessionManager
 from ..utils import get_resource_path
 from .hotkey_dialog import SettingsDialog
-from .shelf_widget import DropShelfWidget
+from .shelf_widget import KyteShelfWidget, DropShelfWidget
 
 
 class ShelfManager(QObject):
@@ -29,9 +30,10 @@ class ShelfManager(QObject):
         self.watcher.directoryChanged.connect(self.on_directory_changed)
         self.watched_dir = ""
         self.known_files = set()
-        
+
+        self.session_manager = SessionManager(config_manager=self.config_manager)
         self.init_tray()
-        self.create_shelf()
+        self.restore_session()
 
     def on_config_changed(self, new_config):
         """當設定變更時即時套用主題色彩"""
@@ -60,7 +62,7 @@ class ShelfManager(QObject):
         else:
             self.tray_icon.setIcon(QApplication.style().standardIcon(QStyle.SP_DirIcon))
             
-        self.tray_icon.setToolTip("置物架")
+        self.tray_icon.setToolTip("KyteShelf")
         
         self.tray_menu = QMenu()
         self.tray_menu.setStyleSheet("""
@@ -107,11 +109,40 @@ class ShelfManager(QObject):
         
     def create_shelf(self):
         color = self.colors[(self.next_id - 1) % len(self.colors)]
-        shelf = DropShelfWidget(manager=self, shelf_id=self.next_id, color=color)
+        shelf = KyteShelfWidget(manager=self, shelf_id=self.next_id, color=color)
         self.shelves.append(shelf)
         self.next_id += 1
         return shelf
-        
+
+    def restore_session(self):
+        """從 session.json 還原上次工作階段，若無記錄則建立空置物架"""
+        states = self.session_manager.load()
+        if not states:
+            self.create_shelf()
+            return
+
+        for state in states:
+            shelf = self.create_shelf()
+            # 沿用儲存的 shelf_id（維持「置物架 #N」編號一致性）
+            saved_id = state.get("shelf_id")
+            if saved_id is not None:
+                shelf.shelf_id = saved_id
+            shelf.restore_from_state(state)
+
+            # 有內容或有釘選才自動顯示
+            if shelf.file_paths or shelf.is_pinned:
+                shelf.show()
+                shelf.raise_()
+
+        # 確保 next_id 不與已還原的 ID 衝突
+        if states:
+            max_id = max(s.get("shelf_id", 1) for s in states)
+            self.next_id = max(self.next_id, max_id + 1)
+
+    def save_session(self):
+        """序列化所有置物架狀態至 session.json"""
+        self.session_manager.save(self.shelves)
+
     def create_and_show_shelf(self):
         target_shelf = None
         # 優先尋找已經隱藏的閒置置物架來重複使用
@@ -119,7 +150,7 @@ class ShelfManager(QObject):
             if not shelf.isVisible():
                 target_shelf = shelf
                 break
-                
+
         if not target_shelf:
             target_shelf = self.create_shelf()
             

@@ -27,6 +27,9 @@ class ShelfFileList(QListWidget):
         self.itemDoubleClicked.connect(self.open_file)
 
         self.drag_start_pos = None
+        self._reorder_mode = False
+        self._reorder_current_row = -1
+        self.drag_start_row = -1
 
         self.setStyleSheet("""
             QListWidget {
@@ -116,6 +119,10 @@ class ShelfFileList(QListWidget):
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.drag_start_pos = event.position().toPoint()
+            item = self.itemAt(event.position().toPoint())
+            self.drag_start_row = self.row(item) if item else -1
+            self._reorder_mode = False
+            self._reorder_current_row = -1
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
@@ -126,6 +133,33 @@ class ShelfFileList(QListWidget):
         if (event.position().toPoint() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
             return
 
+        local_pos = event.position().toPoint()
+        is_inside = self.rect().contains(local_pos)
+
+        # --- 列表內拖曳排序 ---
+        # 啟動條件：目標在列表內 + 單選 + 點擊起始於有效項目上
+        if is_inside and not self._reorder_mode and self.drag_start_row >= 0:
+            selected = self.selectedItems()
+            if len(selected) <= 1:
+                self._reorder_mode = True
+                self._reorder_current_row = self.drag_start_row
+                self.setCursor(Qt.SizeVerCursor)
+
+        if self._reorder_mode:
+            if is_inside:
+                target_row = self._get_target_row(local_pos.y())
+                # 逐步向目標交換，達到連續動第複製的被拖動物件實時移動
+                while self._reorder_current_row > target_row and self._reorder_current_row > 0:
+                    self._swap_rows(self._reorder_current_row - 1, self._reorder_current_row)
+                    self._reorder_current_row -= 1
+                while self._reorder_current_row < target_row and self._reorder_current_row < self.count() - 1:
+                    self._swap_rows(self._reorder_current_row, self._reorder_current_row + 1)
+                    self._reorder_current_row += 1
+                self.setCurrentRow(self._reorder_current_row)
+            # 還在拖曳中，不論達到边界外就働住（不切換為外部拖曳）
+            return
+
+        # --- 外部拖曳（拖入其他應用程式） ---
         selected_items = self.selectedItems()
         if not selected_items:
             super().mouseMoveEvent(event)
@@ -171,6 +205,7 @@ class ShelfFileList(QListWidget):
         if action != Qt.IgnoreAction:
             for item in selected_items:
                 path = item.data(Qt.UserRole)
+                self.shelf_window._delete_temp_if_sticky(path)
                 if path in self.shelf_window.file_paths:
                     self.shelf_window.file_paths.remove(path)
                 self.takeItem(self.row(item))
@@ -179,6 +214,40 @@ class ShelfFileList(QListWidget):
 
             if len(self.shelf_window.file_paths) == 0 and not self.shelf_window.is_pinned:
                 self.shelf_window.hide()
+
+    def mouseReleaseEvent(self, event):
+        if self._reorder_mode:
+            self._reorder_mode = False
+            self._reorder_current_row = -1
+            self.drag_start_row = -1
+            self.unsetCursor()
+        self.drag_start_pos = None
+        super().mouseReleaseEvent(event)
+
+    def _get_target_row(self, cursor_y: int) -> int:
+        """依指標 Y 計算目標列數，輸出範圍 [0, count-1]"""
+        for i in range(self.count()):
+            rect = self.visualItemRect(self.item(i))
+            if cursor_y < rect.center().y():
+                return i
+        return max(0, self.count() - 1)
+
+    def _swap_rows(self, row_a: int, row_b: int):
+        """交換兩個列數的項目，同步更新 file_paths"""
+        if row_a == row_b:
+            return
+        if row_a > row_b:
+            row_a, row_b = row_b, row_a
+        # 先取出大列數，再取小列數，避免移除後下標偏移
+        item_b = self.takeItem(row_b)
+        item_a = self.takeItem(row_a)
+        self.insertItem(row_a, item_b)
+        self.insertItem(row_b, item_a)
+        # 同步 file_paths
+        if self.shelf_window:
+            fps = self.shelf_window.file_paths
+            if 0 <= row_a < len(fps) and 0 <= row_b < len(fps):
+                fps[row_a], fps[row_b] = fps[row_b], fps[row_a]
 
     def open_menu(self, pos):
         item = self.itemAt(pos)
@@ -260,6 +329,7 @@ class ShelfFileList(QListWidget):
         elif action == act_delete:
             if path_str in self.shelf_window.file_paths:
                 self.shelf_window.file_paths.remove(path_str)
+            self.shelf_window._delete_temp_if_sticky(path_str)
             self.takeItem(self.row(item))
             self.shelf_window.update_state()
 

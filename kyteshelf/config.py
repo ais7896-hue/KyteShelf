@@ -33,7 +33,14 @@ class ConfigManager(QObject):
                 json.dump(self.DEFAULT_CONFIG, f, indent=4, ensure_ascii=False)
             return local_cfg
         except Exception:
-            appdata = Path(os.environ.get("APPDATA", Path.home())) / "DropShelf"
+            appdata = Path(os.environ.get("APPDATA", Path.home())) / "KyteShelf"
+            old_appdata = Path(os.environ.get("APPDATA", Path.home())) / "DropShelf"
+            if old_appdata.exists() and not appdata.exists():
+                try:
+                    import shutil
+                    shutil.copytree(old_appdata, appdata)
+                except Exception:
+                    pass
             appdata.mkdir(parents=True, exist_ok=True)
             return appdata / "config.json"
 

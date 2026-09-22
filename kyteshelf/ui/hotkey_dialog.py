@@ -173,7 +173,7 @@ class SettingsDialog(QDialog):
         self.selected_theme_color = "#0284C7"
         self.theme_buttons = []
         
-        self.setWindowTitle("DropShelf 偏好設定")
+        self.setWindowTitle("KyteShelf 偏好設定")
         self.setMinimumSize(480, 600)
         self.resize(480, 620)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)

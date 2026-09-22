@@ -9,25 +9,26 @@
 ### ✨ 新增功能 (Features)
 - **文字與網址改為自黏標籤 (Sticky Notes) 機制**：
   - 拖入文字或網址時，不再直接存為冷冰冰的 `.txt` 或 `.url` 檔案項目，而是自動轉化為「自黏標籤 / 便箋」。
-  - **視覺便箋化**：清單項目具備便籤黃柔和底色、專屬繪製的自黏便籤圖示（📝 便箋 / 🔖 網址標籤）與內容摘要預覽。
+  - **視覺便箋化**：清單項目具備便籤黃柔和底色、專屬繪製的自黏便箋圖示（📝 便箋 / 🔖 網址標籤）與內容摘要預覽。
   - **獨立便箋視窗**：雙擊自黏標籤項目或透過右鍵選單，可彈出獨立、支援縮放與置頂釘選的無邊框便利貼視窗（`StickyNoteWindow`），可自由閱讀、編輯並即時雙向同步回置物架。
   - **智慧拖放 (Smart Drag-out)**：拖出自黏標籤時，直接提供純文字 MIME，拖入瀏覽器輸入框、聊天室、Word 或程式編輯器可直接貼入內文或網址；同時相容檔案總管拖曳落地。
   - **右鍵選單增強**：新增「📝 開啟自黏便箋」、「📋 複製內容」、「🌐 在瀏覽器開啟（網址專屬）」等快捷功能。
 
 ### 🏗️ 架構重構 (Refactoring & Architecture)
+- **系統名稱更名為 KyteShelf**：
+  - 正式將系統與模組命名由 `DropShelf` 更新為 `KyteShelf`（套件路徑 `kyteshelf`，主視窗類別 `KyteShelfWidget`）。
 - **專案全面模組化 (Modular Architecture)**：
-  - 將超過 1,600 行的單檔架構拆解為獨立職責的 `dropshelf` 套件，提升程式碼可讀性、維護性與擴充性。
+  - 將架構拆解為獨立職責的 `kyteshelf` 套件，提升程式碼可讀性、維護性與擴充性。
   - **核心層拆解**：
-    - `dropshelf.utils`：收攏平臺資源路徑解析（支援開發環境與 PyInstaller 打包）及 Windows `--noconsole` 模式標準串流重定向防崩潰機制。
-    - `dropshelf.config`：獨立 `ConfigManager` 設定管理模組，處理本機與 AppData 路徑優先判定、讀寫持久化與即時變更通知。
-    - `dropshelf.input_monitor`：拆分全域滑鼠晃動偵測演算法、修飾鍵轉換與 `pynput` 熱鍵監聽機制。
+    - `kyteshelf.utils`：收攏平臺資源路徑解析（支援開發環境與 PyInstaller 打包）及 Windows `--noconsole` 模式標準串流重定向防崩潰機制。
+    - `kyteshelf.config`：獨立 `ConfigManager` 設定管理模組，處理本機與 AppData 路徑優先判定、讀寫持久化與即時變更通知。
+    - `kyteshelf.input_monitor`：拆分全域滑鼠晃動偵測演算法、修飾鍵轉換與 `pynput` 熱鍵監聽機制。
   - **UI 視窗層拆解**：
-    - `dropshelf.ui.hotkey_dialog`：獨立熱鍵錄製輸入框 (`HotkeyRecorderEdit`) 與偏好設定視窗 (`SettingsDialog`)。
-    - `dropshelf.ui.shelf_list`：獨立清單元件 (`ShelfFileList`)，封裝拖曳傳遞、右鍵功能、圖片批次處理與 Outlook 郵件自動掛載。
-    - `dropshelf.ui.shelf_widget`：獨立懸浮置物架主視窗 (`DropShelfWidget`) 與拖放暫存邏輯。
-    - `dropshelf.ui.shelf_manager`：獨立多置物架生命週期管理員 (`ShelfManager`)、系統托盤常駐與資料夾變更監控。
-- **主程式入口**：
-  - 專案根目錄建立統一啟動進入點 `main.py`。
+    - `kyteshelf.ui.hotkey_dialog`：獨立熱鍵錄製輸入框 (`HotkeyRecorderEdit`) 與偏好設定視窗 (`SettingsDialog`)。
+    - `kyteshelf.ui.shelf_list`：獨立清單元件 (`ShelfFileList`)，封裝拖曳傳遞、右鍵功能、圖片批次處理與 Outlook 郵件自動掛載。
+    - `kyteshelf.ui.shelf_widget`：獨立懸浮置物架主視窗 (`KyteShelfWidget`) 與拖放暫存邏輯。
+    - `kyteshelf.ui.shelf_manager`：獨立多置物架生命週期管理員 (`ShelfManager`)、系統托盤常駐與資料夾變更監控。
+  - 打包與執行流程全面轉移至 `main.py`。
 - **打包配置同步**：
   - 更新 `DropShelf.spec` 與 `README.md`，打包與執行流程全面轉移至 `main.py`。
 

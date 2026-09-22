@@ -1,10 +1,10 @@
 import sys
 from PySide6.QtWidgets import QApplication
 
-from dropshelf.utils import init_runtime_environment
-from dropshelf.config import ConfigManager
-from dropshelf.input_monitor import TriggerSignals, GlobalInputMonitor
-from dropshelf.ui.shelf_manager import ShelfManager
+from kyteshelf.utils import init_runtime_environment
+from kyteshelf.config import ConfigManager
+from kyteshelf.input_monitor import TriggerSignals, GlobalInputMonitor
+from kyteshelf.ui.shelf_manager import ShelfManager
 
 
 def main():
@@ -35,6 +35,7 @@ def main():
     monitor = GlobalInputMonitor(signals, config_manager=config_manager)
     monitor.start()
 
+    app.aboutToQuit.connect(manager.save_session)
     sys.exit(app.exec())
 
 

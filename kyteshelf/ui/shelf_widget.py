@@ -23,7 +23,7 @@ from .sticky_note import StickyNoteWindow, create_sticky_icon
 
 
 
-class DropShelfWidget(QWidget):
+class KyteShelfWidget(QWidget):
     def __init__(self, manager=None, shelf_id=1, color="#0284C7"):
         super().__init__()
         self.manager = manager
@@ -37,7 +37,7 @@ class DropShelfWidget(QWidget):
         self.window_drag_pos = None
 
         # 建立暫存目錄以存放拖入的純文字與網址
-        self.temp_dir = Path(tempfile.gettempdir()) / "DropShelf"
+        self.temp_dir = Path(tempfile.gettempdir()) / "KyteShelf"
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.active_notes = []
 
@@ -410,8 +410,80 @@ class DropShelfWidget(QWidget):
         self.update_state()
 
     def clear_files(self):
+        for path_str in list(self.file_paths):
+            self._delete_temp_if_sticky(path_str)
         self.file_paths.clear()
         self.list_widget.clear()
+        self.update_state()
+
+    def _delete_temp_if_sticky(self, path_str: str):
+        """若路徑屬於自黏便箋暫存檔（在 temp_dir 內），立刻刪除實體檔案"""
+        try:
+            p = Path(path_str)
+            if p.parent.resolve() == self.temp_dir.resolve() and p.exists():
+                p.unlink()
+        except Exception:
+            pass
+
+    def get_state(self) -> dict:
+        """序列化自身狀態以供 SessionManager 儲存"""
+        items = []
+        for i in range(self.list_widget.count()):
+            item = self.list_widget.item(i)
+            note_data = item.data(Qt.UserRole + 1)
+            if note_data and isinstance(note_data, dict) and note_data.get("type") == "sticky_note":
+                items.append({
+                    "type": "sticky_note",
+                    "note_type": note_data.get("note_type", "text"),
+                    "content": note_data.get("content", ""),
+                    "display_text": item.text(),
+                })
+            else:
+                path_str = item.data(Qt.UserRole)
+                if path_str:
+                    items.append({
+                        "type": "file",
+                        "path": path_str,
+                    })
+        return {
+            "shelf_id": self.shelf_id,
+            "window_x": self.x(),
+            "window_y": self.y(),
+            "is_pinned": self.is_pinned,
+            "drag_mode": self.drag_mode,
+            "items": items,
+        }
+
+    def restore_from_state(self, state: dict):
+        """從序列化狀態還原置物架內容、位置與模式"""
+        for item_data in state.get("items", []):
+            if item_data.get("type") == "file":
+                path = item_data.get("path", "")
+                if path and Path(path).exists():
+                    self.add_file_item(path)
+            elif item_data.get("type") == "sticky_note":
+                self.add_sticky_note(
+                    item_data.get("content", ""),
+                    item_data.get("note_type", "text"),
+                )
+
+        # 還原拖曳模式（預設 copy，只有存 move 時才切換）
+        if state.get("drag_mode") == "move" and self.drag_mode != "move":
+            self.toggle_drag_mode()
+
+        # 還原釘選狀態
+        if state.get("is_pinned") and not self.is_pinned:
+            self.toggle_pin()
+
+        # 還原視窗位置（clamp 到可用螢幕範圍內）
+        x = state.get("window_x")
+        y = state.get("window_y")
+        if x is not None and y is not None:
+            screen_rect = QApplication.primaryScreen().availableGeometry()
+            x = max(screen_rect.left(), min(x, screen_rect.right() - self.width()))
+            y = max(screen_rect.top(), min(y, screen_rect.bottom() - self.height()))
+            self.move(x, y)
+
         self.update_state()
 
     def update_state(self):
@@ -447,3 +519,7 @@ class DropShelfWidget(QWidget):
         self.opacity_anim.setStartValue(0.0)
         self.opacity_anim.setEndValue(1.0)
         self.opacity_anim.start()
+
+
+# 向下相容別名
+DropShelfWidget = KyteShelfWidget
