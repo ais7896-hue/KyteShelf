@@ -22,8 +22,13 @@ class ConfigManager(QObject):
         self.config = self.load_config()
 
     def _get_config_path(self):
+        import sys
+        # 若為 PyInstaller 打包環境，直接使用 AppData，避免寫入臨時目錄導致重啟後設定遺失
+        if getattr(sys, "frozen", False):
+            return self._get_appdata_config_path()
+
         try:
-            # 專案根目錄優先
+            # 開發環境下以專案根目錄優先
             local_dir = Path(__file__).resolve().parent.parent
             local_cfg = local_dir / "config.json"
             if local_cfg.exists():
@@ -33,16 +38,19 @@ class ConfigManager(QObject):
                 json.dump(self.DEFAULT_CONFIG, f, indent=4, ensure_ascii=False)
             return local_cfg
         except Exception:
-            appdata = Path(os.environ.get("APPDATA", Path.home())) / "KyteShelf"
-            old_appdata = Path(os.environ.get("APPDATA", Path.home())) / "DropShelf"
-            if old_appdata.exists() and not appdata.exists():
-                try:
-                    import shutil
-                    shutil.copytree(old_appdata, appdata)
-                except Exception:
-                    pass
-            appdata.mkdir(parents=True, exist_ok=True)
-            return appdata / "config.json"
+            return self._get_appdata_config_path()
+
+    def _get_appdata_config_path(self):
+        appdata = Path(os.environ.get("APPDATA", Path.home())) / "KyteShelf"
+        old_appdata = Path(os.environ.get("APPDATA", Path.home())) / "DropShelf"
+        if old_appdata.exists() and not appdata.exists():
+            try:
+                import shutil
+                shutil.copytree(old_appdata, appdata)
+            except Exception:
+                pass
+        appdata.mkdir(parents=True, exist_ok=True)
+        return appdata / "config.json"
 
     def load_config(self):
         cfg = self.DEFAULT_CONFIG.copy()

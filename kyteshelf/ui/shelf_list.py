@@ -5,13 +5,13 @@ import time
 import webbrowser
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QPoint, QSize, QUrl, QMimeData, QRect
+from PySide6.QtCore import Qt, QPoint, QSize, QUrl, QMimeData, QRect, QEvent, QTimer
 from PySide6.QtGui import (
     QDrag, QDesktopServices, QImage, QCursor, QKeySequence, 
     QPainter, QPen, QBrush, QColor
 )
 from PySide6.QtWidgets import (
-    QApplication, QListWidget, QMenu, QMessageBox, QStyledItemDelegate
+    QApplication, QListWidget, QMenu, QMessageBox, QStyledItemDelegate, QToolTip
 )
 
 from .sticky_note import StickyNoteWindow
@@ -171,22 +171,42 @@ class ShelfFileList(QListWidget):
             self.shelf_window.active_notes.append(note_win)
 
     def get_close_btn_rect(self, item_rect: QRect) -> QRect:
-        """計算單獨項目右側 ✕ 刪除按鈕的幾何區域"""
+        """計算單獨項目右側 ✕ 刪除按鈕的繪製幾何區域 (18x18)"""
         btn_size = 18
         x = item_rect.right() - btn_size - 8
         y = item_rect.top() + (item_rect.height() - btn_size) // 2
         return QRect(x, y, btn_size, btn_size)
 
+    def get_close_btn_hit_rect(self, item_rect: QRect) -> QRect:
+        """計算單獨項目右側 ✕ 的點擊判定區（寬度 36px，高度覆蓋整個項目），保證隨手一點即中，絕不漏按"""
+        width = 36
+        return QRect(item_rect.right() - width, item_rect.top(), width, item_rect.height())
+
+    def event(self, event):
+        # 當滑鼠懸停在 ✕ 刪除按鈕上方時，只顯示精簡提示，避免彈出佔據螢幕的大卡片預覽
+        if event.type() == QEvent.ToolTip:
+            pos = event.pos()
+            item = self.itemAt(pos)
+            if item:
+                hit_rect = self.get_close_btn_hit_rect(self.visualItemRect(item))
+                if hit_rect.contains(pos):
+                    QToolTip.showText(event.globalPos(), "移除此項目", self)
+                    return True
+        return super().event(event)
+
     def leaveEvent(self, event):
         self.hovered_row = -1
         self.hovered_close_btn_row = -1
+        self.setCursor(Qt.ArrowCursor)
         self.viewport().update()
         super().leaveEvent(event)
 
     def delete_item(self, item):
-        """單獨刪除指定項目"""
+        """單獨刪除指定項目（0 延遲即時響應）"""
         if not item:
             return
+        # 立即關閉任何殘留的懸浮預覽卡片
+        QToolTip.hideText()
         path_str = item.data(Qt.UserRole)
         if self.shelf_window:
             if path_str in self.shelf_window.file_paths:
@@ -195,18 +215,22 @@ class ShelfFileList(QListWidget):
         self.takeItem(self.row(item))
         self.hovered_row = -1
         self.hovered_close_btn_row = -1
+        self.setCursor(Qt.ArrowCursor)
+        self.viewport().update()
         if self.shelf_window:
             self.shelf_window.update_state()
             if hasattr(self.shelf_window, "show_temporary_hint"):
                 self.shelf_window.show_temporary_hint("🗑️ 已從置物架移除項目")
             if self.shelf_window.manager:
-                self.shelf_window.manager.save_session()
+                # 存檔透過事件循環非同步執行，完全避免磁碟 I/O 阻塞主執行緒造成卡頓
+                QTimer.singleShot(0, self.shelf_window.manager.save_session)
 
     def delete_selected_items(self):
         """批次或單獨刪除所有目前選取的項目（支援 Delete/Backspace 鍵）"""
         selected_items = self.selectedItems()
         if not selected_items:
             return
+        QToolTip.hideText()
         count = len(selected_items)
         for item in selected_items:
             path_str = item.data(Qt.UserRole)
@@ -218,12 +242,14 @@ class ShelfFileList(QListWidget):
 
         self.hovered_row = -1
         self.hovered_close_btn_row = -1
+        self.setCursor(Qt.ArrowCursor)
+        self.viewport().update()
         if self.shelf_window:
             self.shelf_window.update_state()
             if hasattr(self.shelf_window, "show_temporary_hint"):
                 self.shelf_window.show_temporary_hint(f"🗑️ 已從置物架移除 {count} 個項目")
             if self.shelf_window.manager:
-                self.shelf_window.manager.save_session()
+                QTimer.singleShot(0, self.shelf_window.manager.save_session)
 
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key_Delete, Qt.Key_Backspace):
@@ -241,10 +267,11 @@ class ShelfFileList(QListWidget):
         if event.button() == Qt.LeftButton:
             pos = event.position().toPoint()
             item = self.itemAt(pos)
-            # 點擊右側 ✕ 按鈕時直接觸發單獨刪除
+            # 點擊右側 ✕ 按鈕（命中擴大判定區 36px）時直接觸發單獨刪除
             if item:
-                btn_rect = self.get_close_btn_rect(self.visualItemRect(item))
-                if btn_rect.contains(pos):
+                hit_rect = self.get_close_btn_hit_rect(self.visualItemRect(item))
+                if hit_rect.contains(pos):
+                    QToolTip.hideText()
                     self.delete_item(item)
                     event.accept()
                     return
@@ -263,8 +290,14 @@ class ShelfFileList(QListWidget):
         new_hover_row = self.row(item) if item else -1
         new_close_row = -1
         if item:
-            if self.get_close_btn_rect(self.visualItemRect(item)).contains(local_pos):
+            if self.get_close_btn_hit_rect(self.visualItemRect(item)).contains(local_pos):
                 new_close_row = new_hover_row
+
+        # 懸停在 ✕ 上時切換為手指指針游標，提升互動靈敏回饋
+        if new_close_row != -1:
+            self.setCursor(Qt.PointingHandCursor)
+        else:
+            self.setCursor(Qt.ArrowCursor)
 
         if new_hover_row != self.hovered_row or new_close_row != self.hovered_close_btn_row:
             self.hovered_row = new_hover_row
@@ -368,9 +401,22 @@ class ShelfFileList(QListWidget):
             default_action = Qt.CopyAction
 
         action = drag.exec(supported_actions, default_action)
+        target = drag.target()
 
         if self.shelf_window:
             self.shelf_window.is_dragging_out = False
+        self.drag_start_pos = None
+
+        # 雙重防護：若在置物架視窗內部放開（尚未完全拖出），絕不刪除項目
+        cursor_pos = QCursor.pos()
+        is_dropped_inside = False
+        if target and (target == self or (self.shelf_window and (target == self.shelf_window or self.shelf_window.isAncestorOf(target)))):
+            is_dropped_inside = True
+        elif self.shelf_window and self.shelf_window.frameGeometry().contains(cursor_pos):
+            is_dropped_inside = True
+
+        if is_dropped_inside:
+            return
 
         if action != Qt.IgnoreAction:
             for item in selected_items:
@@ -381,6 +427,8 @@ class ShelfFileList(QListWidget):
                 self.takeItem(self.row(item))
 
             self.shelf_window.update_state()
+            if self.shelf_window.manager:
+                self.shelf_window.manager.save_session()
 
             if len(self.shelf_window.file_paths) == 0 and not self.shelf_window.is_pinned:
                 self.shelf_window.hide()
@@ -463,7 +511,23 @@ class ShelfFileList(QListWidget):
         is_sticky = note_data and isinstance(note_data, dict) and note_data.get("type") == "sticky_note"
 
         menu = QMenu(self)
-        menu.setStyleSheet("QMenu { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; padding: 4px; }")
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #FFFFFF;
+                border: 1px solid #CBD5E1;
+                border-radius: 6px;
+                padding: 4px;
+            }
+            QMenu::item {
+                padding: 6px 18px;
+                border-radius: 4px;
+                color: #1E293B;
+            }
+            QMenu::item:selected {
+                background-color: #F1F5F9;
+                color: #0284C7;
+            }
+        """)
 
         act_open_note = None
         act_copy_content = None

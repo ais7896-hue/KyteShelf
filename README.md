@@ -107,7 +107,7 @@ KyteShelf/
 使用 PyInstaller 進行打包（無主控台視窗 + 嵌入圖示）：
 
 ```powershell
-pyinstaller --noconsole --onefile --icon=icon.ico --name=KyteShelf main.py
+python -m PyInstaller --noconsole --onefile --icon=icon.ico --name=KyteShelf main.py
 ```
 
 > 搭配 Inno Setup 腳本（`setup.iss`）可進一步封裝成標準安裝程式精靈。

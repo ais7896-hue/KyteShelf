@@ -23,8 +23,21 @@ class SessionManager:
         return appdata / "session.json"
 
     def _cleanup_old_temp_files(self, max_age_days: int = 7):
-        """清除 %TEMP%\\KyteShelf 內超過 N 天的舊暫存檔"""
+        r"""清除 %TEMP%\KyteShelf 內超過 N 天的舊暫存檔（排除目前 session 仍在引用的檔案）"""
         cutoff = time.time() - max_age_days * 86400
+        active_paths = set()
+        if self.session_file.exists():
+            try:
+                with open(self.session_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                for shelf in data.get("shelves", []):
+                    for item in shelf.get("items", []):
+                        p = item.get("path") or item.get("filepath")
+                        if p:
+                            active_paths.add(Path(p).resolve())
+            except Exception:
+                pass
+
         for dir_name in ["KyteShelf", "DropShelf"]:
             temp_dir = Path(tempfile.gettempdir()) / dir_name
             if not temp_dir.exists():
@@ -32,7 +45,8 @@ class SessionManager:
             for f in temp_dir.iterdir():
                 try:
                     if f.is_file() and f.stat().st_mtime < cutoff:
-                        f.unlink()
+                        if f.resolve() not in active_paths:
+                            f.unlink()
                 except Exception:
                     pass
 

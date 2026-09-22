@@ -75,6 +75,7 @@ class ShelfManager(QObject):
             QMenu::item {
                 padding: 6px 24px;
                 border-radius: 4px;
+                color: #1E293B;
             }
             QMenu::item:selected {
                 background-color: #F1F5F9;

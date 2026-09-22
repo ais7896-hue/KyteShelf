@@ -218,6 +218,7 @@ class KyteShelfWidget(QWidget):
         self.temp_dir = Path(tempfile.gettempdir()) / "KyteShelf"
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.active_notes = []
+        self.suppress_auto_hide = False
 
         self.init_ui()
 
@@ -563,7 +564,7 @@ class KyteShelfWidget(QWidget):
         self.drag_mode = "copy"
         self.btn_mode = QPushButton("📋 複製模式", self.container)
         self.btn_mode.setCursor(Qt.PointingHandCursor)
-        self.btn_mode.setToolTip("點擊切換拖曳模式：複製（拖出保留） / 搬移（拖出刪除）")
+        self.btn_mode.setToolTip("點擊切換拖曳模式：複製（保留來源檔案） / 搬移（移動來源檔案）")
         self.btn_mode.setStyleSheet("""
             QPushButton {
                 background-color: #F1F5F9;
@@ -664,19 +665,20 @@ class KyteShelfWidget(QWidget):
         if not self.file_paths:
             return
 
-        desktop = Path.home() / "Desktop"
-        default_name = str(desktop / f"archive_{int(time.time())}.zip")
-        
-        save_path, _ = QFileDialog.getSaveFileName(
-            self, 
-            "儲存 ZIP 壓縮檔", 
-            default_name, 
-            "ZIP Files (*.zip)"
-        )
-        if not save_path:
-            return
-
+        self.suppress_auto_hide = True
         try:
+            desktop = Path.home() / "Desktop"
+            default_name = str(desktop / f"archive_{int(time.time())}.zip")
+            
+            save_path, _ = QFileDialog.getSaveFileName(
+                self, 
+                "儲存 ZIP 壓縮檔", 
+                default_name, 
+                "ZIP Files (*.zip)"
+            )
+            if not save_path:
+                return
+
             with zipfile.ZipFile(save_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 for path_str in self.file_paths:
                     p = Path(path_str)
@@ -695,6 +697,8 @@ class KyteShelfWidget(QWidget):
             subprocess.run(f'explorer /select,"{os.path.normpath(save_path)}"')
         except Exception as e:
             QMessageBox.warning(self, "壓縮失敗", f"打包過程發生錯誤：\n{str(e)}")
+        finally:
+            self.suppress_auto_hide = False
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -795,11 +799,32 @@ class KyteShelfWidget(QWidget):
     def changeEvent(self, event):
         if event.type() == QEvent.Type.ActivationChange:
             if not self.isActiveWindow():
+                if getattr(self, "suppress_auto_hide", False):
+                    super().changeEvent(event)
+                    return
+
+                active_win = QApplication.activeWindow()
+                if active_win:
+                    if active_win == self or self.isAncestorOf(active_win) or active_win.parent() == self:
+                        super().changeEvent(event)
+                        return
+                    if hasattr(self, "active_notes") and active_win in self.active_notes:
+                        super().changeEvent(event)
+                        return
+                    if self.manager and getattr(self.manager, "settings_dialog", None) == active_win:
+                        super().changeEvent(event)
+                        return
+
                 if not self.is_dragging_out and not self.is_pinned and self.window_drag_pos is None:
                     self.hide()
         super().changeEvent(event)
 
     def dragEnterEvent(self, event):
+        # 忽略本視窗自己正在向外拖曳的事件，防止在視窗內部放開時自吞自吃
+        if event.source() == self.list_widget or event.source() == self or self.is_dragging_out:
+            event.ignore()
+            return
+
         mime = event.mimeData()
         if mime.hasUrls() or mime.hasText() or mime.hasImage():
             event.acceptProposedAction()
@@ -844,6 +869,11 @@ class KyteShelfWidget(QWidget):
 
     def dropEvent(self, event):
         self.dragLeaveEvent(None)
+        # 忽略自身拖出的放開事件
+        if event.source() == self.list_widget or event.source() == self or self.is_dragging_out:
+            event.ignore()
+            return
+
         mime = event.mimeData()
         has_handled = False
 
@@ -861,10 +891,10 @@ class KyteShelfWidget(QWidget):
         if not has_handled and mime.hasUrls():
             for url in mime.urls():
                 if url.isLocalFile():
+                    has_handled = True  # 只要是本機實體檔案，標記已處理，絕對不可降級為純文字便箋
                     path = os.path.normpath(url.toLocalFile())
                     if path and path not in self.file_paths:
                         self.add_file_item(path)
-                        has_handled = True
                 elif url.scheme() in ["http", "https"]:
                     url_str = url.toString()
                     # 判斷是否為網頁圖片 URL，若是則自動下載為實體圖片！
@@ -949,10 +979,9 @@ class KyteShelfWidget(QWidget):
         self.add_sticky_note(text, note_type="text")
 
     def _create_file_tooltip(self, path_str: str) -> str:
-        """為檔案建立現代美觀的 ToolTip，若是圖片則包含尺寸資訊與縮圖預覽"""
+        """為檔案建立現代美觀的 ToolTip，包含尺寸資訊與路徑"""
         path = Path(path_str)
         clean_name = html.escape(path.name)
-        file_url = html.escape(QUrl.fromLocalFile(path_str).toString())
 
         # 格式化檔案路徑（適度折行，避免橫向過寬）
         parts = path_str.replace('\\', '/').split('/')
@@ -987,38 +1016,22 @@ class KyteShelfWidget(QWidget):
             pass
 
         img_exts = {".png", ".jpg", ".jpeg", ".bmp", ".webp", ".gif", ".ico", ".svg", ".jfif", ".tif", ".tiff"}
+        dim_info = ""
         if path.suffix.lower() in img_exts and path.exists():
-            reader = QImageReader(path_str)
-            sz = reader.size()
-            w, h = sz.width(), sz.height()
-            if w > 0 and h > 0:
-                max_w, max_h = 240, 180
-                scale = min(max_w / w, max_h / h, 1.0)
-                disp_w = max(1, int(w * scale))
-                disp_h = max(1, int(h * scale))
-                img_html = f'<div style="margin: 6px 0; text-align: center;"><img src="{file_url}" width="{disp_w}" height="{disp_h}" /></div>'
-                dim_info = f"{w} &times; {h} px &bull; "
-            else:
-                img_html = f'<div style="margin: 6px 0; text-align: center;"><img src="{file_url}" width="200" /></div>'
-                dim_info = ""
+            try:
+                reader = QImageReader(path_str)
+                sz = reader.size()
+                if sz.isValid() and sz.width() > 0 and sz.height() > 0:
+                    dim_info = f"📐 {sz.width()} &times; {sz.height()} px &nbsp;|&nbsp; "
+            except Exception:
+                pass
 
-            meta_info = f"{dim_info}{size_str}".strip(" \u2022&bull;")
-            meta_line = f'<div style="font-size: 11px; color: #94A3B8; text-align: center;">{meta_info}</div>' if meta_info else ""
-
-            return f"""<html><body>
-<div style="font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif; max-width: 260px;">
-    <div style="font-weight: bold; font-size: 12px; color: #F8FAFC; word-break: break-all; margin-bottom: 2px;">{clean_name}</div>
-    {img_html}
-    {meta_line}
-</div>
-</body></html>"""
-        else:
-            info_line = f"<span>{size_str}</span><br/>" if size_str else ""
-            return f"""<html><body>
+        size_line = f"<span>{dim_info}📦 {size_str}</span><br/>" if size_str else ""
+        return f"""<html><body>
 <div style="font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif; max-width: 280px;">
     <div style="font-weight: bold; font-size: 12px; color: #F8FAFC; word-break: break-all; margin-bottom: 2px;">{clean_name}</div>
     <div style="font-size: 11px; color: #94A3B8; line-height: 1.4;">
-        {info_line}
+        {size_line}
         <span style="color: #64748B; font-size: 10px;">{formatted_path}</span>
     </div>
 </div>
@@ -1162,9 +1175,13 @@ class KyteShelfWidget(QWidget):
     def _delete_temp_if_sticky(self, path_str: str):
         """若路徑屬於自黏便箋暫存檔（在 temp_dir 內），立刻刪除實體檔案"""
         try:
-            p = Path(path_str)
-            if p.parent.resolve() == self.temp_dir.resolve() and p.exists():
-                p.unlink()
+            # 純字串前綴比對，避免 Path.resolve() 在 Windows 雲端硬碟/網路路徑阻塞主執行緒
+            temp_prefix = str(self.temp_dir).rstrip("/\\").lower()
+            norm = path_str.replace("/", "\\").lower()
+            if norm.startswith(temp_prefix):
+                p = Path(path_str)
+                if p.exists():
+                    p.unlink()
         except Exception:
             pass
 
@@ -1239,23 +1256,27 @@ class KyteShelfWidget(QWidget):
         return f"置物架 #{self.shelf_id}"
 
     def prompt_rename(self):
-        default_name = f"置物架 #{self.shelf_id}"
-        current = self.custom_name if self.custom_name else default_name
-        dialog = RenameDialog(
-            current_name=current,
-            default_name=default_name,
-            theme_color=self.theme_color,
-            parent=self
-        )
-        if dialog.exec() == QDialog.Accepted:
-            new_name = dialog.new_name.strip()
-            if not new_name or new_name == default_name:
-                self.custom_name = ""
-            else:
-                self.custom_name = new_name
-            self.update_state()
-            if self.manager:
-                self.manager.save_session()
+        self.suppress_auto_hide = True
+        try:
+            default_name = f"置物架 #{self.shelf_id}"
+            current = self.custom_name if self.custom_name else default_name
+            dialog = RenameDialog(
+                current_name=current,
+                default_name=default_name,
+                theme_color=self.theme_color,
+                parent=self
+            )
+            if dialog.exec() == QDialog.Accepted:
+                new_name = dialog.new_name.strip()
+                if not new_name or new_name == default_name:
+                    self.custom_name = ""
+                else:
+                    self.custom_name = new_name
+                self.update_state()
+                if self.manager:
+                    self.manager.save_session()
+        finally:
+            self.suppress_auto_hide = False
 
     def update_state(self):
         count = len(self.file_paths)
