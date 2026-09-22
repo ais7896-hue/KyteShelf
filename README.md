@@ -49,7 +49,28 @@ pip install -r requirements.txt
 ### 2. 啟動程式
 
 ```powershell
-python "DropShelf V1.0.1.py"
+python main.py
+```
+
+---
+
+## 📁 專案架構
+
+```text
+DropShelf/
+├── main.py              # 主程式進入點
+├── dropshelf/           # 核心模組套件
+│   ├── utils.py         # 跨平臺資源載入與相容性工具
+│   ├── config.py        # 設定檔管理器 (ConfigManager)
+│   ├── input_monitor.py # 全域滑鼠晃動與鍵盤熱鍵監聽
+│   └── ui/              # 使用者介面模組
+│       ├── hotkey_dialog.py # 熱鍵錄製與偏好設定面板
+│       ├── shelf_list.py    # 置物架檔案清單與右鍵動作
+│       ├── shelf_widget.py  # 浮動置物架主視窗
+│       └── shelf_manager.py # 托盤管理員與資料夾監控
+├── icon.ico             # 應用程式圖示
+├── config.json          # 本機偏好設定
+└── DropShelf.spec       # PyInstaller 打包規格檔
 ```
 
 ---
@@ -72,7 +93,11 @@ python "DropShelf V1.0.1.py"
 使用 PyInstaller 進行打包（無主控台視窗 + 嵌入圖示）：
 
 ```powershell
-pyinstaller --noconsole --onefile --icon=icon.ico "DropShelf V1.0.1.py"
+# 方式一：直接透過專案 Spec 檔打包
+pyinstaller DropShelf.spec
+
+# 方式二：單行指令打包
+pyinstaller --noconsole --onefile --icon=icon.ico main.py
 ```
 
 > 搭配 Inno Setup 腳本（`setup.iss`）可進一步封裝成標準安裝程式精靈。
