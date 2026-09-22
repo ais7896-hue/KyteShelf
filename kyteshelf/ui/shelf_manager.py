@@ -8,9 +8,11 @@ from PySide6.QtWidgets import (
 )
 
 from ..config import ConfigManager
+from ..license import LicenseManager
 from ..session import SessionManager
 from ..utils import get_resource_path
 from .hotkey_dialog import SettingsDialog
+from .license_dialog import LicenseDialog
 from .shelf_widget import KyteShelfWidget, DropShelfWidget
 
 
@@ -18,13 +20,16 @@ class ShelfManager(QObject):
     def __init__(self, config_manager: ConfigManager = None):
         super().__init__()
         self.config_manager = config_manager or ConfigManager()
+        self.license_manager = LicenseManager.get_instance(self.config_manager)
         self.shelves = []
         self.next_id = 1
         self.current_theme = self.config_manager.config.get("theme_color", "#0284C7")
         self.colors = [self.current_theme, "#16A34A", "#EA580C", "#9333EA", "#E11D48", "#0D9488"]
         self.settings_dialog = None
+        self.license_dialog = None
 
         self.config_manager.config_changed.connect(self.on_config_changed)
+        self.license_manager.license_changed.connect(self.update_tray_license_status)
         
         self.watcher = QFileSystemWatcher(self)
         self.watcher.directoryChanged.connect(self.on_directory_changed)
@@ -51,6 +56,23 @@ class ShelfManager(QObject):
         self.settings_dialog.show()
         self.settings_dialog.raise_()
         self.settings_dialog.activateWindow()
+
+    def open_license_dialog(self):
+        """開啟軟體授權管理視窗"""
+        if not self.license_dialog:
+            self.license_dialog = LicenseDialog(self.license_manager)
+        self.license_dialog.refresh_ui_state()
+        self.license_dialog.show()
+        self.license_dialog.raise_()
+        self.license_dialog.activateWindow()
+
+    def update_tray_license_status(self):
+        """更新托盤選單的授權狀態指示"""
+        if hasattr(self, "act_license"):
+            if self.license_manager.is_activated():
+                self.act_license.setText("✨ 專業版授權 (已開通)")
+            else:
+                self.act_license.setText("🔑 軟體授權 / 開通專業版...")
         
     def init_tray(self):
         self.tray_icon = QSystemTrayIcon(self)
@@ -95,6 +117,10 @@ class ShelfManager(QObject):
 
         act_settings = self.tray_menu.addAction("⚙️ 偏好設定...")
         act_settings.triggered.connect(self.open_settings)
+
+        self.act_license = self.tray_menu.addAction("🔑 軟體授權 / 開通專業版...")
+        self.act_license.triggered.connect(self.open_license_dialog)
+        self.update_tray_license_status()
         self.tray_menu.addSeparator()
         
         act_watch = self.tray_menu.addAction("👀 設定監控資料夾...")

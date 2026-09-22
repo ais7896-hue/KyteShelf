@@ -6,6 +6,8 @@ from PySide6.QtWidgets import (
 )
 
 from ..config import ConfigManager
+from ..license import LicenseManager
+from .license_dialog import LicenseDialog
 
 
 class HotkeyRecorderEdit(QLineEdit):
@@ -170,8 +172,10 @@ class SettingsDialog(QDialog):
     def __init__(self, config_manager: ConfigManager, parent=None):
         super().__init__(parent)
         self.config_manager = config_manager
+        self.license_manager = LicenseManager.get_instance(config_manager)
         self.selected_theme_color = "#0284C7"
         self.theme_buttons = []
+        self.license_dialog = None
         
         self.setWindowTitle("KyteShelf 偏好設定")
         self.setMinimumSize(480, 600)
@@ -179,7 +183,52 @@ class SettingsDialog(QDialog):
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
         self.init_ui()
+        self.license_manager.license_changed.connect(self.update_license_badge)
         self.load_values()
+        self.update_license_badge()
+
+    def open_license_dialog(self):
+        if not self.license_dialog:
+            self.license_dialog = LicenseDialog(self.license_manager, self)
+        self.license_dialog.refresh_ui_state()
+        self.license_dialog.show()
+        self.license_dialog.raise_()
+        self.license_dialog.activateWindow()
+
+    def update_license_badge(self):
+        if hasattr(self, "btn_license_badge"):
+            if self.license_manager.is_activated():
+                self.btn_license_badge.setText("🟢 專業版已啟用 ✨")
+                self.btn_license_badge.setStyleSheet("""
+                    QPushButton {
+                        background-color: #DCFCE7;
+                        border: 1px solid #86EFAC;
+                        border-radius: 12px;
+                        padding: 3px 10px;
+                        font-size: 11px;
+                        font-weight: bold;
+                        color: #15803D;
+                    }
+                    QPushButton:hover {
+                        background-color: #BBF7D0;
+                    }
+                """)
+            else:
+                self.btn_license_badge.setText("🟡 免費模式 (點擊開通)")
+                self.btn_license_badge.setStyleSheet("""
+                    QPushButton {
+                        background-color: #FEF3C7;
+                        border: 1px solid #FDE68A;
+                        border-radius: 12px;
+                        padding: 3px 10px;
+                        font-size: 11px;
+                        font-weight: bold;
+                        color: #B45309;
+                    }
+                    QPushButton:hover {
+                        background-color: #FDE68A;
+                    }
+                """)
 
     def init_ui(self):
         self.setStyleSheet("""
@@ -196,10 +245,19 @@ class SettingsDialog(QDialog):
         layout.setContentsMargins(20, 16, 20, 16)
         layout.setSpacing(14)
 
-        # 頂部說明
+        # 頂部說明與授權膠囊
+        top_header = QHBoxLayout()
         title_label = QLabel("⚙️ 偏好設定", self)
         title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #0F172A;")
-        layout.addWidget(title_label)
+        top_header.addWidget(title_label)
+        top_header.addStretch()
+
+        self.btn_license_badge = QPushButton(self)
+        self.btn_license_badge.setCursor(Qt.PointingHandCursor)
+        self.btn_license_badge.clicked.connect(self.open_license_dialog)
+        top_header.addWidget(self.btn_license_badge)
+
+        layout.addLayout(top_header)
 
         # 區塊 1: 召喚與操作
         group_trigger = QFrame(self)
