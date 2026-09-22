@@ -14,7 +14,7 @@ from PySide6.QtCore import QObject, Signal
 DEFAULT_JWT_SECRET = "KyteShelf_Secret_2026_@KeySecure"
 
 # 預設 Worker API 網址 (使用者可在 config.json 自訂或寫死)
-DEFAULT_API_BASE_URL = "https://kyteshelf-license.workers.dev"
+DEFAULT_API_BASE_URL = "https://kyteshelf-license.ais7896.workers.dev"
 
 
 def get_machine_guid() -> str:
@@ -145,7 +145,10 @@ class LicenseManager(QObject):
             req = urllib.request.Request(
                 api_url,
                 data=req_data,
-                headers={"Content-Type": "application/json; charset=utf-8"},
+                headers={
+                    "Content-Type": "application/json; charset=utf-8",
+                    "User-Agent": "KyteShelf-Client/1.3.0 (Windows NT 10.0; Win64; x64)"
+                },
                 method="POST"
             )
 
@@ -202,7 +205,10 @@ class LicenseManager(QObject):
             req = urllib.request.Request(
                 api_url,
                 data=req_data,
-                headers={"Content-Type": "application/json; charset=utf-8"},
+                headers={
+                    "Content-Type": "application/json; charset=utf-8",
+                    "User-Agent": "KyteShelf-Client/1.3.0 (Windows NT 10.0; Win64; x64)"
+                },
                 method="POST"
             )
 
