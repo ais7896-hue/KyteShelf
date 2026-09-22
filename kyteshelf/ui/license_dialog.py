@@ -270,9 +270,10 @@ class LicenseDialog(QDialog):
     def refresh_ui_state(self):
         """依據目前啟用狀態切換顯示元件與樣式"""
         info = self.license_manager.get_license_info()
-        is_pro = info["is_pro"]
+        plan_type = info.get("plan_type", "free")
+        trial_days = info.get("trial_days_left", 0)
 
-        if is_pro:
+        if plan_type == "pro":
             self.icon_badge.setText("✨")
             self.status_card.setStyleSheet("""
                 QFrame#StatusCard {
@@ -294,6 +295,28 @@ class LicenseDialog(QDialog):
             self.btn_deactivate.setVisible(True)
             self.btn_buy.setVisible(False)
             self.adjustSize()
+        elif plan_type == "trial":
+            self.icon_badge.setText("⏳")
+            self.status_card.setStyleSheet("""
+                QFrame#StatusCard {
+                    background-color: #EFF6FF;
+                    border: 1.5px solid #93C5FD;
+                    border-radius: 10px;
+                }
+            """)
+            self.status_badge.setText(f"🔵 專業版全功能試用中（剩餘 {trial_days} 天）")
+            self.status_badge.setStyleSheet("font-size: 14px; font-weight: bold; color: #1D4ED8;")
+            self.status_desc.setText(
+                f"您目前享有專業版全部無限制功能（無限置物架、無限檔案容量、ZIP 打包、資料夾即時監控）。<br>"
+                f"試用期滿後將自動切換為基礎免費版。您隨時可以購買序號開通永久買斷版。"
+            )
+
+            self.input_card.setVisible(True)
+            self.btn_deactivate.setVisible(False)
+            self.btn_buy.setVisible(True)
+            self.key_input.clear()
+            self.msg_label.clear()
+            self.adjustSize()
         else:
             self.icon_badge.setText("💎")
             self.status_card.setStyleSheet("""
@@ -303,10 +326,11 @@ class LicenseDialog(QDialog):
                     border-radius: 10px;
                 }
             """)
-            self.status_badge.setText("🟡 免費體驗模式中")
+            self.status_badge.setText("🟡 基礎免費版模式")
             self.status_badge.setStyleSheet("font-size: 14px; font-weight: bold; color: #B45309;")
             self.status_desc.setText(
-                "目前正使用免費功能。開通專業版可解鎖全功能支援，買斷制永久使用，支援換機解綁。"
+                "您的 14 天全功能試用已結束，軟體已切換為【基礎免費版】（支援 1 個置物架、單架上限 5 個檔案）。<br>"
+                "歡迎以 NT$ 399 購買序號解鎖永久無限制專業版，感謝支持獨立開發者！"
             )
 
             self.input_card.setVisible(True)
@@ -314,6 +338,7 @@ class LicenseDialog(QDialog):
             self.btn_buy.setVisible(True)
             self.key_input.clear()
             self.msg_label.clear()
+            self.adjustSize()
 
     def handle_activate(self):
         key = self.key_input.text().strip()

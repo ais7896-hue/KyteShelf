@@ -41,6 +41,11 @@ def get_machine_guid() -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
 
 
+TRIAL_DAYS = 14
+FREE_MAX_SHELVES = 1
+FREE_MAX_FILES_PER_SHELF = 5
+
+
 class LicenseManager(QObject):
     license_changed = Signal(bool)  # is_activated
     _instance = None
@@ -58,16 +63,25 @@ class LicenseManager(QObject):
         self.config_manager = config_manager
         self.machine_id = get_machine_guid()
         self.license_file = self._get_license_file_path()
+        self.trial_file = self._get_trial_file_path()
         self._is_pro = False
         self._license_data = {}
+        self._trial_days_left = 0
+        self._is_trial_valid = False
         
         # 初始化時從本地快取載入並驗證
         self.verify_local_license()
+        self._check_trial_status()
 
     def _get_license_file_path(self) -> Path:
         appdata = Path(os.environ.get("APPDATA", Path.home())) / "KyteShelf"
         appdata.mkdir(parents=True, exist_ok=True)
         return appdata / "license.dat"
+
+    def _get_trial_file_path(self) -> Path:
+        appdata = Path(os.environ.get("APPDATA", Path.home())) / "KyteShelf"
+        appdata.mkdir(parents=True, exist_ok=True)
+        return appdata / "trial.dat"
 
     def get_api_base_url(self) -> str:
         if self.config_manager:
@@ -79,9 +93,174 @@ class LicenseManager(QObject):
         """目前是否已啟用為永久專業版"""
         return self._is_pro
 
+    def is_unlimited(self) -> bool:
+        """是否享有全部無限制功能（Pro 永久版 或 14 天試用期內）"""
+        if self._is_pro:
+            return True
+        return self._is_trial_valid
+
+    def get_plan_type(self) -> str:
+        """取得目前運作模式: 'pro', 'trial', 'free'"""
+        if self._is_pro:
+            return "pro"
+        elif self._is_trial_valid:
+            return "trial"
+        else:
+            return "free"
+
+    def get_trial_days_left(self) -> int:
+        """取得試用剩餘天數"""
+        return max(0, self._trial_days_left)
+
+    def _check_trial_status(self):
+        """檢查或建立防篡改的 14 天試用期記錄"""
+        import time
+        import math
+        now = time.time()
+
+        if self._is_pro:
+            self._is_trial_valid = False
+            self._trial_days_left = 0
+            return
+
+        secret = DEFAULT_JWT_SECRET.encode("utf-8")
+
+        if not self.trial_file.exists():
+            # 首次啟動：建立 trial.dat
+            first_run = now
+            last_seen = now
+            sig_raw = f"{first_run:.0f}:{last_seen:.0f}:{self.machine_id}"
+            sig = hmac.new(secret, sig_raw.encode("utf-8"), hashlib.sha256).hexdigest()
+            trial_data = {
+                "first_run": first_run,
+                "last_seen": last_seen,
+                "machine_id": self.machine_id,
+                "sig": sig
+            }
+            try:
+                with open(self.trial_file, "w", encoding="utf-8") as f:
+                    json.dump(trial_data, f)
+            except Exception:
+                pass
+            self._is_trial_valid = True
+            self._trial_days_left = TRIAL_DAYS
+            return
+
+        try:
+            with open(self.trial_file, "r", encoding="utf-8") as f:
+                trial_data = json.load(f)
+
+            first_run = float(trial_data.get("first_run", now))
+            last_seen = float(trial_data.get("last_seen", now))
+            file_guid = trial_data.get("machine_id", "")
+            file_sig = trial_data.get("sig", "")
+
+            # 驗證 HMAC 簽名與機器識別碼
+            sig_raw = f"{first_run:.0f}:{last_seen:.0f}:{file_guid}"
+            expected_sig = hmac.new(secret, sig_raw.encode("utf-8"), hashlib.sha256).hexdigest()
+
+            if not hmac.compare_digest(file_sig, expected_sig) or file_guid != self.machine_id:
+                # 憑證被篡改或拷貝至別台電腦，直接終止試用
+                self._is_trial_valid = False
+                self._trial_days_left = 0
+                return
+
+            # 防改電腦系統時間倒退（允許 2 分鐘時鐘抖動）
+            if now < last_seen - 120:
+                # 系統時間被往回調，判定作弊，試用失效
+                self._is_trial_valid = False
+                self._trial_days_left = 0
+                return
+
+            # 更新最新執行時間
+            new_last_seen = max(now, last_seen)
+            new_sig_raw = f"{first_run:.0f}:{new_last_seen:.0f}:{self.machine_id}"
+            new_sig = hmac.new(secret, new_sig_raw.encode("utf-8"), hashlib.sha256).hexdigest()
+            trial_data["last_seen"] = new_last_seen
+            trial_data["sig"] = new_sig
+
+            try:
+                with open(self.trial_file, "w", encoding="utf-8") as f:
+                    json.dump(trial_data, f)
+            except Exception:
+                pass
+
+            # 計算經過時間
+            elapsed_seconds = now - first_run
+            trial_seconds = TRIAL_DAYS * 86400
+
+            if elapsed_seconds < trial_seconds:
+                self._is_trial_valid = True
+                days_left = math.ceil((trial_seconds - elapsed_seconds) / 86400)
+                self._trial_days_left = max(1, days_left)
+            else:
+                self._is_trial_valid = False
+                self._trial_days_left = 0
+
+        except Exception:
+            self._is_trial_valid = False
+            self._trial_days_left = 0
+
+    # === 功能限制判定接口 ===
+
+    def can_create_shelf(self, current_visible_count: int) -> Tuple[bool, str]:
+        """判定是否允許新增置物架"""
+        if self.is_unlimited():
+            return True, ""
+        if current_visible_count >= FREE_MAX_SHELVES:
+            return False, (
+                f"【基礎免費版限制】\n\n"
+                f"您的 14 天全功能試用已結束，免費版最多同時使用 {FREE_MAX_SHELVES} 個置物架。\n"
+                f"升級為 Pro 專業版（買斷制 NT$ 399）即可解鎖無限置物架！"
+            )
+        return True, ""
+
+    def can_add_files(self, current_file_count: int, incoming_count: int) -> Tuple[int, str]:
+        """
+        判定是否可加入檔案
+        回傳: (允許加入的數量, 提示訊息)
+        """
+        if self.is_unlimited():
+            return incoming_count, ""
+        
+        remaining_slots = max(0, FREE_MAX_FILES_PER_SHELF - current_file_count)
+        allowed_count = min(incoming_count, remaining_slots)
+        
+        if allowed_count < incoming_count:
+            msg = (
+                f"【基礎免費版限制】\n\n"
+                f"您的 14 天全功能試用已結束，免費版單一置物架上限為 {FREE_MAX_FILES_PER_SHELF} 個檔案。\n"
+                f"本次僅為您收納前 {allowed_count} 個項目。\n"
+                f"升級為 Pro 專業版即可解鎖無限檔案收納容量！"
+            )
+            return allowed_count, msg
+        return allowed_count, ""
+
+    def can_use_zip(self) -> Tuple[bool, str]:
+        """判定是否可使用一鍵打包 ZIP"""
+        if self.is_unlimited():
+            return True, ""
+        return False, (
+            "【Pro 專業版專屬功能】\n\n"
+            "「一鍵打包壓縮為 ZIP」屬於 Pro 專業版功能。\n"
+            "升級 Pro 即可永久享用完整生產力工具鏈！"
+        )
+
+    def can_use_folder_watch(self) -> Tuple[bool, str]:
+        """判定是否可使用資料夾監控"""
+        if self.is_unlimited():
+            return True, ""
+        return False, (
+            "【Pro 專業版專屬功能】\n\n"
+            "「資料夾即時監控自動入架」屬於 Pro 專業版功能。\n"
+            "升級 Pro 即可解鎖全自動監控流程！"
+        )
+
     def get_license_info(self) -> dict:
         return {
             "is_pro": self._is_pro,
+            "plan_type": self.get_plan_type(),
+            "trial_days_left": self.get_trial_days_left(),
             "machine_id": self.machine_id,
             "license_key": self._license_data.get("key", ""),
             "masked_key": self._mask_key(self._license_data.get("key", "")),

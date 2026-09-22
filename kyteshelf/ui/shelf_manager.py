@@ -69,10 +69,14 @@ class ShelfManager(QObject):
     def update_tray_license_status(self):
         """更新托盤選單的授權狀態指示"""
         if hasattr(self, "act_license"):
-            if self.license_manager.is_activated():
+            plan = self.license_manager.get_plan_type()
+            if plan == "pro":
                 self.act_license.setText("✨ 專業版授權 (已開通)")
+            elif plan == "trial":
+                days = self.license_manager.get_trial_days_left()
+                self.act_license.setText(f"⏳ 專業版試用中 (剩餘 {days} 天)...")
             else:
-                self.act_license.setText("🔑 軟體授權 / 開通專業版...")
+                self.act_license.setText("🟡 基礎免費版 (升級 Pro NT$ 399)...")
         
     def init_tray(self):
         self.tray_icon = QSystemTrayIcon(self)
@@ -256,6 +260,15 @@ class ShelfManager(QObject):
         self.session_manager.save(self.shelves)
 
     def create_and_show_shelf(self):
+        # 檢查是否達到置物架上限
+        visible_shelves = [s for s in self.shelves if s.isVisible()]
+        can_create, reason = self.license_manager.can_create_shelf(len(visible_shelves))
+        if not can_create:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.information(None, "基礎免費版限制", reason, QMessageBox.Ok)
+            self.open_license_dialog()
+            return
+
         target_shelf = None
         # 優先尋找已經隱藏的閒置置物架來重複使用
         for shelf in self.shelves:
@@ -283,11 +296,24 @@ class ShelfManager(QObject):
                 break
                 
         if not target_shelf:
-            target_shelf = self.create_shelf()
+            # 晃動如果當前已經有開著的架子且達到上限，直接喚醒既有的第一個架子
+            visible_shelves = [s for s in self.shelves if s.isVisible()]
+            can_create, _ = self.license_manager.can_create_shelf(len(visible_shelves))
+            if not can_create and visible_shelves:
+                target_shelf = visible_shelves[0]
+            else:
+                target_shelf = self.create_shelf()
             
         target_shelf.popup_at(x, y)
 
     def set_watch_folder(self):
+        can_watch, reason = self.license_manager.can_use_folder_watch()
+        if not can_watch:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.information(None, "Pro 專業版專屬功能", reason, QMessageBox.Ok)
+            self.open_license_dialog()
+            return
+
         folder = QFileDialog.getExistingDirectory(None, "選擇要監控的資料夾")
         if folder:
             self.stop_watch_folder()

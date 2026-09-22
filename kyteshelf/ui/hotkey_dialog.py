@@ -197,7 +197,8 @@ class SettingsDialog(QDialog):
 
     def update_license_badge(self):
         if hasattr(self, "btn_license_badge"):
-            if self.license_manager.is_activated():
+            plan = self.license_manager.get_plan_type()
+            if plan == "pro":
                 self.btn_license_badge.setText("🟢 專業版已啟用 ✨")
                 self.btn_license_badge.setStyleSheet("""
                     QPushButton {
@@ -213,8 +214,25 @@ class SettingsDialog(QDialog):
                         background-color: #BBF7D0;
                     }
                 """)
+            elif plan == "trial":
+                days = self.license_manager.get_trial_days_left()
+                self.btn_license_badge.setText(f"⏳ 試用中 (剩 {days} 天)")
+                self.btn_license_badge.setStyleSheet("""
+                    QPushButton {
+                        background-color: #DBEAFE;
+                        border: 1px solid #93C5FD;
+                        border-radius: 12px;
+                        padding: 3px 10px;
+                        font-size: 11px;
+                        font-weight: bold;
+                        color: #1D4ED8;
+                    }
+                    QPushButton:hover {
+                        background-color: #BFDBFE;
+                    }
+                """)
             else:
-                self.btn_license_badge.setText("🟡 免費模式 (點擊開通)")
+                self.btn_license_badge.setText("🟡 基礎免費版 (升級 Pro)")
                 self.btn_license_badge.setStyleSheet("""
                     QPushButton {
                         background-color: #FEF3C7;

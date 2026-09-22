@@ -665,6 +665,18 @@ class KyteShelfWidget(QWidget):
         if not self.file_paths:
             return
 
+        if self.manager and hasattr(self.manager, "license_manager"):
+            can_zip, reason = self.manager.license_manager.can_use_zip()
+            if not can_zip:
+                from PySide6.QtWidgets import QMessageBox
+                self.suppress_auto_hide = True
+                try:
+                    QMessageBox.information(self, "Pro 專業版專屬功能", reason, QMessageBox.Ok)
+                    self.manager.open_license_dialog()
+                finally:
+                    self.suppress_auto_hide = False
+                return
+
         self.suppress_auto_hide = True
         try:
             desktop = Path.home() / "Desktop"
@@ -869,6 +881,7 @@ class KyteShelfWidget(QWidget):
 
     def dropEvent(self, event):
         self.dragLeaveEvent(None)
+        self._limit_warned_this_op = False
         # 忽略自身拖出的放開事件
         if event.source() == self.list_widget or event.source() == self or self.is_dragging_out:
             event.ignore()
@@ -1037,10 +1050,24 @@ class KyteShelfWidget(QWidget):
 </div>
 </body></html>"""
 
-    def add_file_item(self, path_str: str):
+    def add_file_item(self, path_str: str) -> bool:
         path_str = os.path.normpath(path_str)
         if path_str in self.file_paths:
-            return
+            return False
+
+        if self.manager and hasattr(self.manager, "license_manager"):
+            allowed, reason = self.manager.license_manager.can_add_files(len(self.file_paths), 1)
+            if allowed <= 0:
+                if not getattr(self, "_limit_warned_this_op", False):
+                    self._limit_warned_this_op = True
+                    from PySide6.QtWidgets import QMessageBox
+                    self.suppress_auto_hide = True
+                    try:
+                        QMessageBox.information(self, "基礎免費版限制", reason, QMessageBox.Ok)
+                        self.manager.open_license_dialog()
+                    finally:
+                        self.suppress_auto_hide = False
+                return False
             
         path = Path(path_str)
         self.file_paths.append(path_str)
@@ -1066,6 +1093,7 @@ class KyteShelfWidget(QWidget):
 
     def paste_from_clipboard(self) -> int:
         """從系統剪貼簿讀取檔案、圖片、文字或網址並加入置物架，回傳加入的項目數量"""
+        self._limit_warned_this_op = False
         clipboard = QApplication.clipboard()
         mime = clipboard.mimeData()
         added_count = 0
