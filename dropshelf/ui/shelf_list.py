@@ -2,13 +2,17 @@ import sys
 import os
 import subprocess
 import time
+import webbrowser
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QPoint, QSize, QUrl, QMimeData
-from PySide6.QtGui import QDrag, QDesktopServices, QImage
+from PySide6.QtGui import QDrag, QDesktopServices, QImage, QCursor
 from PySide6.QtWidgets import (
     QApplication, QListWidget, QMenu, QMessageBox
 )
+
+from .sticky_note import StickyNoteWindow
+
 
 
 class ShelfFileList(QListWidget):
@@ -49,11 +53,65 @@ class ShelfFileList(QListWidget):
         """)
 
     def open_file(self, item):
+        note_data = item.data(Qt.UserRole + 1)
+        if note_data and isinstance(note_data, dict) and note_data.get("type") == "sticky_note":
+            self.show_sticky_note(item, note_data)
+            return
+
         path_str = item.data(Qt.UserRole)
         if sys.platform == "win32":
             os.startfile(path_str)
         else:
             QDesktopServices.openUrl(QUrl.fromLocalFile(path_str))
+
+    def show_sticky_note(self, item, note_data):
+        """開啟獨立浮動的自黏便箋視窗"""
+        note_win = StickyNoteWindow(
+            content=note_data.get("content", ""),
+            note_type=note_data.get("note_type", "text")
+        )
+
+        def on_content_updated(new_content):
+            note_data["content"] = new_content
+            item.setData(Qt.UserRole + 1, note_data)
+
+            note_type = note_data.get("note_type", "text")
+            if note_type == "url":
+                title = new_content.replace("https://", "").replace("http://", "").rstrip("/")
+                if len(title) > 30:
+                    title = title[:27] + "..."
+                item.setText(f"🔖 {title}")
+            else:
+                first_line = new_content.strip().splitlines()[0] if new_content.strip().splitlines() else ""
+                if len(first_line) > 25:
+                    first_line = first_line[:22] + "..."
+                item.setText(f"📝 {first_line}" if first_line else "📝 自黏便箋")
+            item.setToolTip(f"{new_content}\n\n💡 雙擊開啟自黏便箋｜拖出直接貼入文字")
+
+            filepath = note_data.get("filepath")
+            if filepath:
+                try:
+                    with open(filepath, "w", encoding="utf-8") as f:
+                        if note_type == "url":
+                            f.write("[InternetShortcut]\n")
+                            f.write(f"URL={new_content}\n")
+                        else:
+                            f.write(new_content)
+                except Exception:
+                    pass
+
+        note_win.content_updated.connect(on_content_updated)
+
+        cursor_pos = QCursor.pos()
+        note_win.move(cursor_pos.x() + 15, cursor_pos.y() - 20)
+        note_win.show()
+        note_win.raise_()
+        note_win.activateWindow()
+
+        if self.shelf_window:
+            if not hasattr(self.shelf_window, "active_notes"):
+                self.shelf_window.active_notes = []
+            self.shelf_window.active_notes.append(note_win)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -79,6 +137,15 @@ class ShelfFileList(QListWidget):
         urls = [QUrl.fromLocalFile(item.data(Qt.UserRole)) for item in selected_items]
         mime_data = QMimeData()
         mime_data.setUrls(urls)
+
+        # 若選取項目包含自黏標籤，設置文字 MIME，拖入編輯器/網頁時可直接貼入內容
+        note_texts = []
+        for item in selected_items:
+            nd = item.data(Qt.UserRole + 1)
+            if nd and isinstance(nd, dict) and nd.get("type") == "sticky_note":
+                note_texts.append(nd.get("content", ""))
+        if note_texts:
+            mime_data.setText("\n\n".join(note_texts))
 
         drag = QDrag(self)
         drag.setMimeData(mime_data)
@@ -119,17 +186,36 @@ class ShelfFileList(QListWidget):
             return
 
         path_str = item.data(Qt.UserRole)
+        note_data = item.data(Qt.UserRole + 1)
+        is_sticky = note_data and isinstance(note_data, dict) and note_data.get("type") == "sticky_note"
+
         menu = QMenu(self)
         menu.setStyleSheet("QMenu { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; padding: 4px; }")
+
+        act_open_note = None
+        act_copy_content = None
+        act_open_browser = None
+
+        if is_sticky:
+            act_open_note = menu.addAction("📝 開啟自黏便箋")
+            if note_data.get("note_type") == "url":
+                act_copy_content = menu.addAction("📋 複製網址")
+                act_open_browser = menu.addAction("🌐 在預設瀏覽器開啟")
+            else:
+                act_copy_content = menu.addAction("📋 複製文字內容")
+            menu.addSeparator()
 
         act_show = menu.addAction("在檔案總管中顯示")
         act_copy_path = menu.addAction("複製路徑")
         act_zip = menu.addAction("全部打包成 ZIP")
-        act_attach_outlook = menu.addAction("附加到目前 Outlook 郵件")
+        
+        act_attach_outlook = None
+        if not is_sticky:
+            act_attach_outlook = menu.addAction("附加到目前 Outlook 郵件")
         
         selected_paths = [item.data(Qt.UserRole) for item in self.selectedItems()]
         image_extensions = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
-        is_all_images = all(Path(p).suffix.lower() in image_extensions for p in selected_paths)
+        is_all_images = (not is_sticky) and all(Path(p).suffix.lower() in image_extensions for p in selected_paths)
 
         if is_all_images and len(selected_paths) > 0:
             menu.addSeparator()
@@ -146,14 +232,24 @@ class ShelfFileList(QListWidget):
         act_delete = menu.addAction("從置物架移除")
 
         action = menu.exec(self.mapToGlobal(pos))
-        if action == act_show:
+        if act_open_note and action == act_open_note:
+            self.show_sticky_note(item, note_data)
+        elif act_copy_content and action == act_copy_content:
+            QApplication.clipboard().setText(note_data.get("content", ""))
+        elif act_open_browser and action == act_open_browser:
+            url = note_data.get("content", "").strip()
+            if url:
+                if not url.startswith(("http://", "https://")):
+                    url = "https://" + url
+                webbrowser.open(url)
+        elif action == act_show:
             norm_path = os.path.normpath(path_str)
             subprocess.run(f'explorer /select,"{norm_path}"')
         elif action == act_copy_path:
             QApplication.clipboard().setText(path_str)
         elif action == act_zip:
             self.shelf_window.zip_all_files()
-        elif action == act_attach_outlook:
+        elif act_attach_outlook and action == act_attach_outlook:
             self.attach_to_outlook()
         elif action == act_img_resize_50:
             self.process_images(self.selectedItems(), "resize_50")

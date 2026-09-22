@@ -3,7 +3,7 @@
 ; ==========================================
 
 #define MyAppName "DropShelf"
-#define MyAppVersion "1.0.1"
+#define MyAppVersion "1.0.2"
 #define MyAppPublisher "ais7896-hue"
 #define MyAppURL "https://github.com/ais7896-hue/DropShelf"
 #define MyAppExeName "DropShelf.exe"

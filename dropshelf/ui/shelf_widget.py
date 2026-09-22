@@ -9,7 +9,7 @@ from PySide6.QtCore import (
     Qt, QSize, QEvent, QFileInfo, QPropertyAnimation, QEasingCurve
 )
 from PySide6.QtGui import (
-    QIcon, QPixmap, QColor
+    QIcon, QPixmap, QColor, QBrush
 )
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
@@ -19,6 +19,8 @@ from PySide6.QtWidgets import (
 )
 
 from .shelf_list import ShelfFileList
+from .sticky_note import StickyNoteWindow, create_sticky_icon
+
 
 
 class DropShelfWidget(QWidget):
@@ -37,6 +39,7 @@ class DropShelfWidget(QWidget):
         # 建立暫存目錄以存放拖入的純文字與網址
         self.temp_dir = Path(tempfile.gettempdir()) / "DropShelf"
         self.temp_dir.mkdir(parents=True, exist_ok=True)
+        self.active_notes = []
 
         self.init_ui()
 
@@ -49,6 +52,18 @@ class DropShelfWidget(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAcceptDrops(True)
         self.resize(280, 360)
+
+        self.setStyleSheet("""
+            QToolTip {
+                background-color: #1E293B;
+                color: #F8FAFC;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 5px 8px;
+                font-size: 12px;
+                font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            }
+        """)
 
         # 初始化動畫
         self.opacity_anim = QPropertyAnimation(self, b"windowOpacity")
@@ -303,39 +318,70 @@ class DropShelfWidget(QWidget):
                         self.add_file_item(path)
                         has_handled = True
                 elif url.scheme() in ["http", "https"]:
-                    self.create_temp_url_file(url.toString())
+                    self.add_sticky_note(url.toString(), note_type="url")
                     has_handled = True
                     
         if not has_handled and mime.hasText():
-            self.create_temp_text_file(mime.text())
+            self.add_sticky_note(mime.text(), note_type="text")
             
         event.acceptProposedAction()
 
+    def add_sticky_note(self, content: str, note_type: str = "text"):
+        """將純文字或網址以自黏標籤形式加入置物架"""
+        content = content.strip()
+        if not content:
+            return
+
+        ts = int(time.time() * 1000)
+        if note_type == "url":
+            # 建立 URL 快捷關聯檔案（以便支援外部檔案拖曳相容）
+            filename = f"note_url_{ts}.url"
+            filepath = self.temp_dir / filename
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write("[InternetShortcut]\n")
+                f.write(f"URL={content}\n")
+
+            title = content.replace("https://", "").replace("http://", "").rstrip("/")
+            if len(title) > 30:
+                title = title[:27] + "..."
+            item_text = f"🔖 {title}"
+        else:
+            filename = f"note_text_{ts}.txt"
+            filepath = self.temp_dir / filename
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(content)
+
+            first_line = content.splitlines()[0].strip() if content.splitlines() else ""
+            if len(first_line) > 25:
+                first_line = first_line[:22] + "..."
+            item_text = f"📝 {first_line}" if first_line else "📝 自黏便箋"
+
+        path_str = str(filepath)
+        self.file_paths.append(path_str)
+
+        item = QListWidgetItem()
+        item.setText(item_text)
+        item.setToolTip(f"{content}\n\n💡 雙擊開啟自黏便箋｜拖出直接貼入文字")
+        item.setData(Qt.UserRole, path_str)
+        item.setData(Qt.UserRole + 1, {
+            "type": "sticky_note",
+            "note_type": note_type,
+            "content": content,
+            "filepath": path_str
+        })
+        item.setSizeHint(QSize(0, 44))
+        item.setIcon(create_sticky_icon(note_type))
+        item.setBackground(QBrush(QColor("#FEFCE8" if note_type == "text" else "#F0F9FF")))
+        item.setForeground(QBrush(QColor("#854D0E" if note_type == "text" else "#0369A1")))
+
+        self.list_widget.addItem(item)
+        self.update_state()
+
     def create_temp_url_file(self, url_str: str):
-        safe_name = "".join(c for c in url_str.split("://")[-1][:30] if c.isalnum() or c in ".-_")
-        if not safe_name:
-            safe_name = "link"
-        filename = f"{safe_name}_{int(time.time())}.url"
-        filepath = self.temp_dir / filename
-        
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write("[InternetShortcut]\n")
-            f.write(f"URL={url_str}\n")
-            
-        self.add_file_item(str(filepath))
+        self.add_sticky_note(url_str, note_type="url")
 
     def create_temp_text_file(self, text: str):
-        snippet = text[:15].replace("\n", " ").strip()
-        safe_name = "".join(c for c in snippet if c.isalnum() or c == " " or '\u4e00' <= c <= '\u9fa5')
-        if not safe_name:
-            safe_name = "text_snippet"
-        filename = f"{safe_name}_{int(time.time())}.txt"
-        filepath = self.temp_dir / filename
-        
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write(text)
-            
-        self.add_file_item(str(filepath))
+        self.add_sticky_note(text, note_type="text")
 
     def add_file_item(self, path_str: str):
         if path_str in self.file_paths:
