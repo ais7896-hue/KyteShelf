@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ais7896-hue.github.io/KyteShelf-website/sitemap.xml

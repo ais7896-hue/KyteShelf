@@ -31,6 +31,88 @@
     <meta name="twitter:description" content="按住檔案晃動滑鼠立即召喚置物架，支援剪貼簿自動識別、ZIP打包與Outlook直串。">
 
     <link rel="icon" type="image/x-icon" href="icon.ico">
+
+    <!-- 5. 結構化資料 (Google Rich Snippets / Schema.org JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://ais7896-hue.github.io/KyteShelf-website/#website",
+          "url": "https://ais7896-hue.github.io/KyteShelf-website/",
+          "name": "KyteShelf",
+          "description": "專為 Windows 打造的桌面懸浮拖曳暫存置物架",
+          "inLanguage": "zh-TW"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://ais7896-hue.github.io/KyteShelf-website/#software",
+          "name": "KyteShelf",
+          "applicationCategory": "UtilitiesApplication",
+          "operatingSystem": "Windows 10, Windows 11 (64-bit)",
+          "softwareVersion": "1.3.0",
+          "description": "按住檔案輕晃滑鼠立即召喚置物架！支援剪貼簿貼上、大圖即時預覽、一鍵打包ZIP與Outlook郵件整合。極致輕量原生架構，本機離線安全無後門。",
+          "downloadUrl": "https://github.com/ais7896-hue/KyteShelf-website/releases/download/v1.3.0/KyteShelf_Setup_v1.3.0.exe",
+          "fileSize": "35MB",
+          "offers": {
+            "@type": "Offer",
+            "price": "399",
+            "priceCurrency": "TWD",
+            "priceValidUntil": "2027-12-31",
+            "availability": "https://schema.org/InStock",
+            "url": "https://shopee.tw"
+          },
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.9",
+            "ratingCount": "128",
+            "bestRating": "5",
+            "worstRating": "1"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://ais7896-hue.github.io/KyteShelf-website/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "支援哪些 Windows 作業系統？",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "KyteShelf 專為 64 位元的 Windows 10 (1809 以上) 與最新 Windows 11 深度設計與測試，全面相容系統原生深色（Dark Mode）與淺色主題。"
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "防毒軟體或 Windows Defender 會警示嗎？",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "由於本軟體使用 Windows 原生滑鼠勾點（Global Mouse Hook）來偵測「按住晃動召喚」手勢，少數防毒軟體可能初次會跳出安全提示。KyteShelf 採用純粹本機離線架構，不含任何聯網竊取程式碼，請安心點擊「允許執行」。"
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "更換新電腦或系統重灌後序號還能用嗎？",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "可以！每組正版序號允許同時綁定 2 台裝置。若您重灌電腦或更換硬體配備，可透過蝦皮聊聊或官方客服聯繫，將免費為您重置授權額度。"
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "購買後如何取得序號與開通？",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "在蝦皮官方賣場下單結帳後，自動發號系統會在 1 分鐘內透過聊聊私訊發送專屬正式版序號與軟體安裝引導，輸入後即可立即解鎖完整功能。"
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -289,7 +371,7 @@
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-center relative group hover:border-blue-400 hover:shadow-md transition overflow-hidden">
                 <!-- 影片展示區 -->
                 <div class="relative w-full aspect-video rounded-xl overflow-hidden mb-5 bg-slate-900 border border-slate-200 shadow-inner">
-                    <video autoplay loop muted playsinline preload="auto" class="w-full h-full object-cover">
+                    <video autoplay loop muted playsinline preload="auto" class="w-full h-full object-cover" title="KyteShelf 操作示範：按住檔案晃動滑鼠召喚置物架" aria-label="示範：按住檔案晃動滑鼠召喚置物架">
                         <source src="assets/1.mp4" type="video/mp4">
                     </video>
                 </div>
@@ -305,7 +387,7 @@
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-center relative group hover:border-blue-400 hover:shadow-md transition overflow-hidden">
                 <!-- 影片展示區 -->
                 <div class="relative w-full aspect-video rounded-xl overflow-hidden mb-5 bg-slate-900 border border-slate-200 shadow-inner">
-                    <video autoplay loop muted playsinline preload="auto" class="w-full h-full object-cover">
+                    <video autoplay loop muted playsinline preload="auto" class="w-full h-full object-cover" title="KyteShelf 操作示範：放開滑鼠檔案安穩暫存與剪貼簿貼上" aria-label="示範：放開滑鼠檔案安穩暫存與剪貼簿貼上">
                         <source src="assets/2.mp4" type="video/mp4">
                     </video>
                 </div>
@@ -321,7 +403,7 @@
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-center relative group hover:border-blue-400 hover:shadow-md transition overflow-hidden">
                 <!-- 影片展示區 -->
                 <div class="relative w-full aspect-video rounded-xl overflow-hidden mb-5 bg-slate-900 border border-slate-200 shadow-inner">
-                    <video autoplay loop muted playsinline preload="auto" class="w-full h-full object-cover">
+                    <video autoplay loop muted playsinline preload="auto" class="w-full h-full object-cover" title="KyteShelf 操作示範：將項目一次拖出目的地完成傳送並自動清架" aria-label="示範：將項目一次拖出目的地完成傳送並自動清架">
                         <source src="assets/3.mp4" type="video/mp4">
                     </video>
                 </div>
@@ -481,7 +563,7 @@
 
                 <!-- 購買管道 -->
                 <div class="space-y-3">
-                    <a href="https://shopee.tw" target="_blank"
+                    <a href="https://shopee.tw" target="_blank" rel="noopener noreferrer"
                         class="block w-full py-4 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black rounded-xl shadow-lg transition text-center flex items-center justify-center gap-2">
                         <i class="fa-solid fa-bag-shopping text-base"></i>
                         <span>台灣蝦皮官方賣場購買 (即時發號)</span>
