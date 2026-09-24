@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KyteShelf 完整操作指南與使用說明 - 專為 Windows 打造的桌面中繼置物架</title>
+    <meta name="description" content="KyteShelf 詳細圖文操作說明書：晃動手勢召喚、剪貼簿自動辨識入架、多架歸納、一鍵打包ZIP、Outlook直串與正版序號開通換機教學。">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif;
+        }
+
+        code, kbd {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .gradient-banner {
+            background: radial-gradient(circle at 50% 10%, rgba(59, 130, 246, 0.12) 0%, rgba(248, 250, 252, 0) 70%);
+        }
+
+        /* 導覽目錄選中平滑效果 */
+        .sidebar-link {
+            transition: all 0.15s ease-in-out;
+        }
+        .sidebar-link:hover {
+            color: #0284c7;
+            padding-left: 0.5rem;
+        }
+
+        /* 內容區塊卡片懸浮微陰影 */
+        .doc-section {
+            scroll-margin-top: 5rem;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-blue-600 selection:text-white">
+
+    <!-- 頂部導覽列 -->
+    <nav class="sticky top-0 z-50 backdrop-blur-md bg-white/90 border-b border-slate-200/80 transition-all">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-3 group">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 to-sky-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition">
+                    <i class="fa-solid fa-layer-group text-lg"></i>
+                </div>
+                <div class="flex flex-col text-left">
+                    <span class="text-xl font-extrabold tracking-tight text-slate-950 leading-tight">KyteShelf</span>
+                    <span class="text-[10px] font-semibold text-slate-400 tracking-wider">USER MANUAL & GUIDE</span>
+                </div>
+            </a>
+
+            <div class="flex items-center gap-4 sm:gap-6">
+                <a href="index.html" class="text-sm font-semibold text-slate-600 hover:text-blue-600 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrow-left text-xs"></i>
+                    <span>返回官方首頁</span>
+                </a>
+                <a href="https://github.com/ais7896-hue/KyteShelf-website/releases/download/v1.3.0/KyteShelf_Setup_v1.3.0.exe"
+                    class="px-4 py-2 text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl shadow-md transition flex items-center gap-2">
+                    <i class="fa-solid fa-download"></i>
+                    <span>下載最新版 (v1.3.0)</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 頂部橫幅 (Header) -->
+    <header class="gradient-banner pt-12 pb-12 border-b border-slate-200/60 bg-white">
+        <div class="max-w-5xl mx-auto px-6 text-center">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-4">
+                <i class="fa-solid fa-book-open"></i>
+                <span>官方全功能圖文使用手冊・適用 Windows 10 / 11</span>
+            </div>
+            <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight mb-4">
+                KyteShelf 操作說明指南
+            </h1>
+            <p class="text-slate-600 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
+                涵蓋從初次安裝、滑鼠晃動召喚、剪貼簿整合、自黏便箋、多架分類到正版開通與換機轉移的完整步驟。
+            </p>
+        </div>
+    </header>
+
+    <!-- 主要內容區 (雙欄結構) -->
+    <div class="max-w-7xl mx-auto px-6 py-10">
+        <div class="flex flex-col lg:flex-row gap-10 items-start">
+
+            <!-- 左側浮動目錄 (Sticky Sidebar) -->
+            <aside class="w-full lg:w-64 flex-shrink-0 lg:sticky lg:top-24 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-3">目錄導覽</div>
+                <nav class="space-y-2 text-sm font-medium text-slate-600">
+                    <a href="#section-start" class="sidebar-link block py-1">1. 快速起步與系統常駐</a>
+                    <a href="#section-summon" class="sidebar-link block py-1">2. 召喚與隱藏機制</a>
+                    <a href="#section-adding" class="sidebar-link block py-1">3. 多元入架模式</a>
+                    <a href="#section-export" class="sidebar-link block py-1">4. 拖出傳輸與 ZIP 壓縮</a>
+                    <a href="#section-multi" class="sidebar-link block py-1">5. 多置物架多工管理</a>
+                    <a href="#section-settings" class="sidebar-link block py-1">6. 偏好設定與個性化</a>
+                    <a href="#section-license" class="sidebar-link block py-1">7. 14 天試用與正版開通</a>
+                    <a href="#section-faq" class="sidebar-link block py-1">8. 常見問題與疑難排解</a>
+                </nav>
+                <div class="mt-6 pt-5 border-t border-slate-100">
+                    <a href="https://shopee.tw" target="_blank"
+                        class="block w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl text-center shadow transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-bag-shopping"></i>
+                        <span>購買終身買斷版 (NT$ 399)</span>
+                    </a>
+                </div>
+            </aside>
+
+            <!-- 右側主要文檔內容 -->
+            <main class="flex-1 w-full space-y-12">
+
+                <!-- 1. 快速起步 -->
+                <section id="section-start" class="doc-section bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-blue-600 mb-4">
+                        <span class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center font-black text-sm">01</span>
+                        <h2 class="text-2xl font-black text-slate-900">快速起步與系統常駐</h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed mb-6">
+                        KyteShelf 採用極致輕量原生架構設計，安裝過程僅需數秒，且運行時記憶體佔用極低（約 30~50MB），全天候在後台為您待命。
+                    </p>
+
+                    <div class="space-y-4">
+                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                            <h4 class="font-bold text-slate-900 mb-1 flex items-center gap-2">
+                                <i class="fa-solid fa-check text-emerald-500"></i>
+                                <span>安裝與啟動</span>
+                            </h4>
+                            <p class="text-sm text-slate-600 leading-relaxed">
+                                執行下載的 <code class="px-1.5 py-0.5 bg-slate-200/80 rounded text-xs text-slate-800">KyteShelf_Setup_v1.3.0.exe</code>，按照引導完成安裝。安裝完成後勾選「啟動 KyteShelf」即可立即開始使用。
+                            </p>
+                        </div>
+
+                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                            <h4 class="font-bold text-slate-900 mb-1 flex items-center gap-2">
+                                <i class="fa-solid fa-desktop text-blue-500"></i>
+                                <span>系統匣 (工作列右下角托盤)</span>
+                            </h4>
+                            <p class="text-sm text-slate-600 leading-relaxed">
+                                啟動後軟體會常駐於 Windows 工作列右下角托盤。在 KyteShelf 圖示上點擊<strong>滑鼠右鍵</strong>，即可呼叫主選單：
+                            </p>
+                            <ul class="list-disc list-inside text-xs sm:text-sm text-slate-600 mt-2 space-y-1 pl-2">
+                                <li><strong>顯示所有置物架</strong>：瞬間喚醒所有已存在的置物架視窗。</li>
+                                <li><strong>📋 剪貼簿快速入架</strong>：自動提取剪貼簿內容並存入置物架。</li>
+                                <li><strong>📑 置物架清單</strong>：依名稱切換、快速定位或重新命名置物架。</li>
+                                <li><strong>⚙️ 偏好設定</strong>：自訂滑鼠晃動靈敏度、全域召喚快捷鍵與主題色彩。</li>
+                                <li><strong>🔑 軟體授權 / 開通專業版</strong>：檢視目前授權狀態（試用期剩餘天數 / 永久專業版）或輸入序號。</li>
+                                <li><strong>👀 設定監控資料夾</strong>：開啟自動偵測入架功能。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. 召喚與隱藏機制 -->
+                <section id="section-summon" class="doc-section bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-blue-600 mb-4">
+                        <span class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center font-black text-sm">02</span>
+                        <h2 class="text-2xl font-black text-slate-900">置物架召喚與隱藏機制</h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed mb-6">
+                        KyteShelf 提供了多種直覺召喚方式，無需中斷手頭工作即可在游標旁隨時調用。
+                    </p>
+
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <div class="p-5 border border-slate-200 rounded-2xl bg-gradient-to-b from-blue-50/40 to-transparent">
+                            <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center mb-3 text-lg">
+                                <i class="fa-solid fa-hand-pointer"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-900 mb-1">方式一：滑鼠晃動召喚 (Shake to Summon)</h3>
+                            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                                在桌面或檔案總管中，<strong>按住滑鼠左鍵抓住檔案，輕微往左右快速搖晃 1~2 下</strong>，置物架便會瞬間彈出在游標身旁。放開滑鼠即可將檔案存入。
+                            </p>
+                        </div>
+
+                        <div class="p-5 border border-slate-200 rounded-2xl bg-gradient-to-b from-sky-50/40 to-transparent">
+                            <div class="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center mb-3 text-lg">
+                                <i class="fa-solid fa-keyboard"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-900 mb-1">方式二：全域快捷鍵召喚</h3>
+                            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                                無論當前處於什麼全螢幕遊戲、瀏覽器或編輯器中，按下預設快捷鍵 <kbd class="px-1.5 py-0.5 bg-slate-200 rounded text-xs text-slate-800 font-bold">Ctrl + `</kbd>（Tab 上方的波浪鍵），置物架立即在滑鼠當前位置現身！
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 釘選與自動隱藏 -->
+                    <div class="p-4 bg-amber-50/80 border border-amber-200 rounded-2xl flex items-start gap-3.5">
+                        <i class="fa-solid fa-thumbtack text-amber-600 text-lg mt-0.5"></i>
+                        <div class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                            <strong class="text-amber-900 font-bold block mb-1">智慧釘選（Pin）與防手滑防吞噬保護：</strong>
+                            點擊置物架右上角的「圖釘 📌」圖示即可將置物架固定於桌面最上層，不會隨視窗切換而隱藏。<br>
+                            若<strong>未釘選</strong>，當您點擊其他視窗時，置物架會自動優雅隱藏，但<strong>裡面的所有檔案依然安全儲存</strong>，下次召喚隨時原貌呈現！
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. 多元入架模式 -->
+                <section id="section-adding" class="doc-section bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-blue-600 mb-4">
+                        <span class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center font-black text-sm">03</span>
+                        <h2 class="text-2xl font-black text-slate-900">多元入架模式 (萬物皆可收納)</h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed mb-6">
+                        KyteShelf 不僅僅支援一般電腦檔案，更打通了剪貼簿、截圖影像、純文字自黏便箋與網頁資源。
+                    </p>
+
+                    <div class="space-y-4">
+                        <!-- 模式 1 -->
+                        <div class="flex items-start gap-4 p-4 border border-slate-200 rounded-2xl">
+                            <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 text-base">
+                                <i class="fa-solid fa-file-import"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">1. 滑鼠直接拖曳（支援批次）</h4>
+                                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                                    框選 1 個或多達數十個檔案、資料夾，直接拖曳到置物架視窗內部放開即可。置物架會自動讀取檔案圖示、名稱與檔案大小。
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- 模式 2 -->
+                        <div class="flex items-start gap-4 p-4 border border-slate-200 rounded-2xl">
+                            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center flex-shrink-0 text-base">
+                                <i class="fa-solid fa-paste"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">2. 剪貼簿貼上 (<kbd class="px-1.5 py-0.5 bg-slate-200 rounded text-xs text-slate-800">Ctrl + V</kbd>)</h4>
+                                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                                    置物架現身後，直接按下鍵盤 <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-xs">Ctrl + V</kbd> 或點擊底部「貼上」按鈕，KyteShelf 會智慧識別剪貼簿型態：
+                                </p>
+                                <ul class="list-disc list-inside text-xs text-slate-500 mt-2 space-y-1">
+                                    <li><strong>檔案總管複製的檔案</strong> ➔ 直接收納入架。</li>
+                                    <li><strong>螢幕截圖（如 Win + Shift + S 截圖或瀏覽器複製影像）</strong> ➔ 自動轉換為 PNG 實體檔案並建立縮圖！</li>
+                                    <li><strong>純文字筆記</strong> ➔ 自動轉換為高質感黃色「自黏便箋（Sticky Note）」，可雙擊放大編輯！</li>
+                                    <li><strong>網址 URL</strong> ➔ 若為圖片網址會自動抓取存檔，一般網址則轉換為連結便利貼。</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- 模式 3 -->
+                        <div class="flex items-start gap-4 p-4 border border-slate-200 rounded-2xl">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-base">
+                                <i class="fa-solid fa-folder-tree"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">3. 資料夾即時監控自動入架 (Watch Folder)</h4>
+                                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                                    在托盤選單點擊「👀 設定監控資料夾...」，選擇您的「下載（Downloads）」或「桌面」。往後只要瀏覽器下載完成任何新檔案，KyteShelf 就會在後台自動為您接進置物架，完全不需手動尋找！
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. 出架與整理運作 -->
+                <section id="section-export" class="doc-section bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-blue-600 mb-4">
+                        <span class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center font-black text-sm">04</span>
+                        <h2 class="text-2xl font-black text-slate-900">出架傳輸、清架與 ZIP 壓縮打包</h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed mb-6">
+                        收集完畢後，如何高效將暫存檔案轉移至目標軟體或壓縮發送？
+                    </p>
+
+                    <div class="space-y-4">
+                        <div class="p-5 border border-slate-200 rounded-2xl">
+                            <h4 class="font-bold text-slate-900 mb-2 flex items-center justify-between">
+                                <span>📋 複製模式 vs 🚚 搬移模式（拖出自動清架）</span>
+                                <span class="text-xs px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg">點擊底部標籤切換</span>
+                            </h4>
+                            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed mb-2">
+                                在置物架左下角有一個操作模式按鈕，點擊可切換：
+                            </p>
+                            <ul class="list-disc list-inside text-xs sm:text-sm text-slate-600 space-y-1.5 pl-2">
+                                <li><strong>📋 複製模式（預設）</strong>：將架內項目拖曳至桌面或通訊軟體後，置物架內的清單<strong>依然保留</strong>，適合重複引用同一批素材。</li>
+                                <li><strong>🚚 搬移模式</strong>：拖出檔案成功轉移至目標視窗後，置物架<strong>自動清除該項目並清空</strong>，乾淨俐落無負擔！</li>
+                            </ul>
+                        </div>
+
+                        <div class="p-5 border border-slate-200 rounded-2xl">
+                            <h4 class="font-bold text-slate-900 mb-2">📦 一鍵打包壓縮成 ZIP</h4>
+                            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                                當您從各處收集好 10 份合約或照片時，不必再開啟 WinRAR 或 7-Zip。直接點擊置物架底部的 <strong>「ZIP」</strong> 按鈕，系統會原地建立一個標準無失真的 ZIP 壓縮檔並自動儲存至桌面！
+                            </p>
+                        </div>
+
+                        <div class="p-5 border border-slate-200 rounded-2xl">
+                            <h4 class="font-bold text-slate-900 mb-2">✉️ Outlook 郵件附件一鍵掛載</h4>
+                            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                                選取置物架內的一件或多件檔案，按<strong>滑鼠右鍵</strong> ➔ 點選<strong>「寄送至 Outlook 郵件...」</strong>，KyteShelf 會透過 Windows 原生 COM 介面自動將檔案附加到您正在撰寫的 Outlook 郵件草稿中。
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. 多置物架多工管理 -->
+                <section id="section-multi" class="doc-section bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-blue-600 mb-4">
+                        <span class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center font-black text-sm">05</span>
+                        <h2 class="text-2xl font-black text-slate-900">多置物架多工管理</h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed mb-6">
+                        面對大型專案時，您可以同時建立多個獨立置物架，將「待處理發票」、「設計素材」與「會議便箋」分別歸納。
+                    </p>
+
+                    <div class="grid sm:grid-cols-3 gap-4 text-center">
+                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                            <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-2 font-bold">
+                                ＋
+                            </div>
+                            <h4 class="font-bold text-slate-800 text-sm mb-1">新增獨立置物架</h4>
+                            <p class="text-xs text-slate-500">點擊置物架標題列右上角的「＋」號，或托盤選單的「新增置物架」，即可開出新架。</p>
+                        </div>
+
+                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-2 text-xs">
+                                <i class="fa-solid fa-pen"></i>
+                            </div>
+                            <h4 class="font-bold text-slate-800 text-sm mb-1">重新命名置物架</h4>
+                            <p class="text-xs text-slate-500">雙擊頂部標題（如「置物架 #1」），即可自訂名稱為「專案素材」或「待發郵件」。</p>
+                        </div>
+
+                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                            <div class="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center mx-auto mb-2 text-xs">
+                                <i class="fa-solid fa-palette"></i>
+                            </div>
+                            <h4 class="font-bold text-slate-800 text-sm mb-1">多色彩識別標籤</h4>
+                            <p class="text-xs text-slate-500">系統內建 6 款調和色彩（天青藍、翡翠綠、活力橘、優雅紫等），每個架子顏色各自獨立。</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. 偏好設定與個性化 -->
+                <section id="section-settings" class="doc-section bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-blue-600 mb-4">
+                        <span class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center font-black text-sm">06</span>
+                        <h2 class="text-2xl font-black text-slate-900">偏好設定詳解</h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed mb-6">
+                        在托盤圖示點右鍵 ➔ 選擇「⚙️ 偏好設定」，或在未釘選的置物架點選齒輪圖示即可進入設定面板。
+                    </p>
+
+                    <div class="space-y-4">
+                        <div class="p-4 border border-slate-200 rounded-2xl flex items-start gap-4">
+                            <span class="text-2xl">⚡</span>
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">晃動靈敏度調整 (1 ~ 5 級)</h4>
+                                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                                    預設為「等級 3（標準）」。如果您平常滑鼠移動幅度較大、容易誤觸，可調為「等級 1 ~ 2（防誤觸偏鈍）」；若希望極速微晃即現身，可調為「等級 4 ~ 5（極靈敏）」。
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="p-4 border border-slate-200 rounded-2xl flex items-start gap-4">
+                            <span class="text-2xl">⌨️</span>
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">全域快捷鍵錄製</h4>
+                                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                                    點擊快捷鍵輸入框即可直接在鍵盤按下任意組合鍵（例如 <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-xs">Alt + Space</kbd> 或 <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-xs">Ctrl + Shift + X</kbd>），系統會即時辨識並綁定。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 7. 14 天試用與正版開通 -->
+                <section id="section-license" class="doc-section bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-blue-600 mb-4">
+                        <span class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center font-black text-sm">07</span>
+                        <h2 class="text-2xl font-black text-slate-900">14 天試用期、正版開通與換機教學</h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed mb-6">
+                        KyteShelf 採用透明健康的「<strong>先用爽 14 天 ➔ 基礎免費版 ➔ Pro 買斷解鎖</strong>」機制，絕不進行惡意鎖定。
+                    </p>
+
+                    <!-- 三種階段說明 -->
+                    <div class="grid md:grid-cols-3 gap-4 mb-6">
+                        <div class="p-4 bg-blue-50/60 border border-blue-200 rounded-2xl text-center">
+                            <span class="text-xs font-black text-blue-600 uppercase tracking-wider block mb-1">第 1 ～ 14 天</span>
+                            <div class="font-bold text-slate-900 mb-1">全功能免費試用</div>
+                            <p class="text-xs text-slate-500">無限置物架、無限檔案容量、ZIP 打包與資料夾監控完全無限制開放使用。</p>
+                        </div>
+
+                        <div class="p-4 bg-amber-50/60 border border-amber-200 rounded-2xl text-center">
+                            <span class="text-xs font-black text-amber-600 uppercase tracking-wider block mb-1">第 15 天起</span>
+                            <div class="font-bold text-slate-900 mb-1">基礎免費版</div>
+                            <p class="text-xs text-slate-500">溫和降級為單一置物架與上限 5 個檔案。軟體依然可開機常駐與基本拖曳，絕不暴力鎖死。</p>
+                        </div>
+
+                        <div class="p-4 bg-emerald-50/60 border border-emerald-200 rounded-2xl text-center">
+                            <span class="text-xs font-black text-emerald-600 uppercase tracking-wider block mb-1">永久買斷 NT$ 399</span>
+                            <div class="font-bold text-slate-900 mb-1">Pro 專業正式版</div>
+                            <p class="text-xs text-slate-500">輸入序號即刻永久解鎖所有限制。單組序號支援 2 台電腦同時啟用，支援換機解綁。</p>
+                        </div>
+                    </div>
+
+                    <!-- 開通與換機具體步驟 -->
+                    <div class="p-6 bg-slate-900 text-white rounded-2xl space-y-4">
+                        <h4 class="font-bold text-amber-400 text-base">🔑 如何輸入序號開通？</h4>
+                        <ol class="list-decimal list-inside text-xs sm:text-sm text-slate-300 space-y-2 pl-1 leading-relaxed">
+                            <li>在 Windows 托盤圖示點右鍵 ➔ 選擇<strong>「🔑 軟體授權 / 開通專業版...」</strong>。</li>
+                            <li>將蝦皮聊聊收到的序號（格式如 <code class="text-amber-300">KYTE-XXXX-XXXX-XXXX</code>）貼入輸入框。</li>
+                            <li>點擊<strong>「立即驗證並開通」</strong>，連線驗證通過後即刻永久解鎖。</li>
+                        </ol>
+
+                        <div class="pt-4 border-t border-slate-800">
+                            <h4 class="font-bold text-sky-400 text-sm mb-1">🔄 更換新電腦時如何轉移？</h4>
+                            <p class="text-xs text-slate-400 leading-relaxed">
+                                在舊電腦打開授權視窗，點擊「<strong>解除此電腦綁定</strong>」，授權名額會瞬間釋放回雲端。接著在新電腦直接輸入原序號即可繼續使用！
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 8. 常見問題與疑難排解 -->
+                <section id="section-faq" class="doc-section bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-blue-600 mb-4">
+                        <span class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center font-black text-sm">08</span>
+                        <h2 class="text-2xl font-black text-slate-900">常見問題與疑難排解</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="border-b border-slate-100 pb-4">
+                            <h4 class="font-bold text-slate-900 text-sm sm:text-base mb-1">Q1：為什麼晃動滑鼠沒有反應？</h4>
+                            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                                請確認您是在<strong>「按住滑鼠左鍵抓住檔案」</strong>的狀態下晃動。若仍無反應，請至「⚙️ 偏好設定」確認「啟用滑鼠晃動召喚」已勾選，並可嘗試將靈敏度調高至等級 4 或 5。
+                            </p>
+                        </div>
+
+                        <div class="border-b border-slate-100 pb-4">
+                            <h4 class="font-bold text-slate-900 text-sm sm:text-base mb-1">Q2：防毒軟體彈出警告是否正常？</h4>
+                            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                                正常。因為 KyteShelf 必須使用 Windows 系統底層的滑鼠勾點（Global Mouse Hook）技術來偵測您是否正在拖曳並搖晃滑鼠。本軟體 100% 不含任何木馬或回傳隱私代碼，請放心加入信任名單。
+                            </p>
+                        </div>
+
+                        <div class="border-b border-slate-100 pb-4">
+                            <h4 class="font-bold text-slate-900 text-sm sm:text-base mb-1">Q3：日常使用需要保持聯網嗎？</h4>
+                            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                                <strong>不需要！</strong> KyteShelf 採用強固的離線簽名授權架構。只有在初次輸入序號開通的那一秒需要連網，驗證完成後本機會簽發離線憑證，未來在無網路的飛機上、保密辦公室斷網環境下均 100% 永久離線可用。
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 底部導購引導 -->
+                <div class="bg-gradient-to-r from-blue-700 via-indigo-600 to-sky-600 rounded-3xl p-8 sm:p-10 text-white text-center shadow-xl">
+                    <h3 class="text-2xl sm:text-3xl font-black mb-3">準備好徹底升級您的 Windows 桌面體驗了嗎？</h3>
+                    <p class="text-blue-100 max-w-xl mx-auto text-sm sm:text-base mb-6 leading-relaxed">
+                        立即下載 14 天全功能免費試用版，或直接以 NT$ 399 買斷永久正式授權。
+                    </p>
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <a href="https://github.com/ais7896-hue/KyteShelf-website/releases/download/v1.3.0/KyteShelf_Setup_v1.3.0.exe"
+                            class="w-full sm:w-auto px-8 py-3.5 bg-white text-blue-700 hover:bg-slate-100 font-bold rounded-xl shadow transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-download"></i>
+                            <span>免費下載試用版 (v1.3.0)</span>
+                        </a>
+                        <a href="https://shopee.tw" target="_blank"
+                            class="w-full sm:w-auto px-8 py-3.5 bg-amber-500 text-slate-950 hover:bg-amber-400 font-extrabold rounded-xl shadow transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-bag-shopping"></i>
+                            <span>前往蝦皮購買終身序號 (NT$ 399)</span>
+                        </a>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- 頁尾 -->
+    <footer class="py-10 border-t border-slate-200 text-center text-xs text-slate-400 bg-white">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2 font-bold text-slate-700">
+                <div class="w-6 h-6 rounded-lg bg-blue-600 flex items-center justify-center text-white text-xs">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <span>KyteShelf 桌面置物架</span>
+            </div>
+            <p>© 2026 KyteShelf. All rights reserved. 專為提升桌面工作效率而生。</p>
+            <div class="flex gap-4">
+                <a href="index.html" class="hover:text-slate-600 transition">官方首頁</a>
+                <a href="https://github.com/ais7896-hue/KyteShelf-website/releases/download/v1.3.0/KyteShelf_Setup_v1.3.0.exe" class="hover:text-slate-600 transition">免費下載</a>
+                <a href="https://shopee.tw" target="_blank" class="hover:text-slate-600 transition">蝦皮賣場</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+
+</html>
