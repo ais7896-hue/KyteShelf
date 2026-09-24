@@ -45,8 +45,8 @@
      - `ADMIN_SECRET`：輸入自訂管理員密鑰（例如：`AdminSuperSecret_2026`）
      - 點擊 **Save**。
 
-> 部署完成後，你的 Worker 網址格式為：
-> `https://kyteshelf-license.<你的帳號子網域>.workers.dev`
+> **你的正式 Worker API 網址**：  
+> `https://kyteshelf-license.ais7896.workers.dev`
 
 ---
 
@@ -58,7 +58,7 @@
 ```powershell
 $headers = @{ "X-Admin-Secret" = "AdminSuperSecret_2026"; "Content-Type" = "application/json" }
 $body = @{ count = 10; max_devices = 2; note = "蝦皮首批銷售" } | ConvertTo-Json
-$response = Invoke-RestMethod -Uri "https://你的Worker網址.workers.dev/api/admin/generate-keys" -Method Post -Headers $headers -Body $body
+$response = Invoke-RestMethod -Uri "https://kyteshelf-license.ais7896.workers.dev/api/admin/generate-keys" -Method Post -Headers $headers -Body $body
 $response.keys
 ```
 
@@ -76,7 +76,7 @@ KYTE-T7V9-2E4X-L8Q3
 ## 🔍 查詢序號狀態 (客戶換機或客服查詢)
 ```powershell
 $headers = @{ "X-Admin-Secret" = "AdminSuperSecret_2026" }
-Invoke-RestMethod -Uri "https://你的Worker網址.workers.dev/api/admin/query-key?key=KYTE-9H2B-4N8C-Z7W1" -Headers $headers
+Invoke-RestMethod -Uri "https://kyteshelf-license.ais7896.workers.dev/api/admin/query-key?key=KYTE-9H2B-4N8C-Z7W1" -Headers $headers
 ```
 可即時查看該序號目前已綁定的電腦名稱、機器 GUID 與啟用時間。
 
