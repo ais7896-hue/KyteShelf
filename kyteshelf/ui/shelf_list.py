@@ -3,9 +3,10 @@ import os
 import subprocess
 import time
 import webbrowser
+import struct
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QPoint, QSize, QUrl, QMimeData, QRect, QEvent, QTimer
+from PySide6.QtCore import Qt, QPoint, QSize, QUrl, QMimeData, QByteArray, QRect, QEvent, QTimer
 from PySide6.QtGui import (
     QDrag, QDesktopServices, QImage, QCursor, QKeySequence, 
     QPainter, QPen, QBrush, QColor
@@ -15,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from .sticky_note import StickyNoteWindow
+from .image_preview import ImagePreviewPopup
 
 
 class ShelfItemDelegate(QStyledItemDelegate):
@@ -84,6 +86,14 @@ class ShelfFileList(QListWidget):
         self._reorder_mode = False
         self._reorder_current_row = -1
         self.drag_start_row = -1
+
+        # 獨立圖片縮圖預覽卡片
+        self.preview_popup = ImagePreviewPopup()
+        self.preview_timer = QTimer(self)
+        self.preview_timer.setSingleShot(True)
+        self.preview_timer.timeout.connect(self._trigger_preview)
+        self._pending_preview_path = ""
+        self._pending_preview_pos = QPoint()
 
         self.setStyleSheet("""
             QListWidget {
@@ -182,19 +192,38 @@ class ShelfFileList(QListWidget):
         width = 36
         return QRect(item_rect.right() - width, item_rect.top(), width, item_rect.height())
 
+    def _trigger_preview(self):
+        """定時觸發圖片懸停縮圖預覽卡片"""
+        if self._pending_preview_path and not self.drag_start_pos and not self._reorder_mode:
+            self.preview_popup.show_preview(self._pending_preview_path, self._pending_preview_pos)
+
+    def hide_preview(self):
+        """隱藏懸浮圖片縮圖預覽"""
+        self.preview_timer.stop()
+        self._pending_preview_path = ""
+        if hasattr(self, "preview_popup"):
+            self.preview_popup.hide_preview()
+
     def event(self, event):
-        # 當滑鼠懸停在 ✕ 刪除按鈕上方時，只顯示精簡提示，避免彈出佔據螢幕的大卡片預覽
         if event.type() == QEvent.ToolTip:
             pos = event.pos()
             item = self.itemAt(pos)
             if item:
                 hit_rect = self.get_close_btn_hit_rect(self.visualItemRect(item))
                 if hit_rect.contains(pos):
+                    self.hide_preview()
                     QToolTip.showText(event.globalPos(), "移除此項目", self)
+                    return True
+
+                # 若為圖片檔案，徹底攔截 QToolTip 預設渲染，全權交給獨立的 ImagePreviewPopup
+                path_str = item.data(Qt.UserRole)
+                img_exts = {".png", ".jpg", ".jpeg", ".bmp", ".webp", ".gif", ".ico", ".svg", ".jfif", ".tif", ".tiff"}
+                if path_str and Path(path_str).suffix.lower() in img_exts and Path(path_str).exists():
                     return True
         return super().event(event)
 
     def leaveEvent(self, event):
+        self.hide_preview()
         self.hovered_row = -1
         self.hovered_close_btn_row = -1
         self.setCursor(Qt.ArrowCursor)
@@ -206,6 +235,7 @@ class ShelfFileList(QListWidget):
         if not item:
             return
         # 立即關閉任何殘留的懸浮預覽卡片
+        self.hide_preview()
         QToolTip.hideText()
         path_str = item.data(Qt.UserRole)
         if self.shelf_window:
@@ -227,6 +257,7 @@ class ShelfFileList(QListWidget):
 
     def delete_selected_items(self):
         """批次或單獨刪除所有目前選取的項目（支援 Delete/Backspace 鍵）"""
+        self.hide_preview()
         selected_items = self.selectedItems()
         if not selected_items:
             return
@@ -264,6 +295,7 @@ class ShelfFileList(QListWidget):
         super().keyPressEvent(event)
 
     def mousePressEvent(self, event):
+        self.hide_preview()
         if event.button() == Qt.LeftButton:
             pos = event.position().toPoint()
             item = self.itemAt(pos)
@@ -303,6 +335,20 @@ class ShelfFileList(QListWidget):
             self.hovered_row = new_hover_row
             self.hovered_close_btn_row = new_close_row
             self.viewport().update()
+
+            # 項目切換時更新縮圖預覽懸浮卡片邏輯
+            if new_hover_row != -1 and new_close_row == -1 and not (event.buttons() & Qt.LeftButton):
+                path_str = item.data(Qt.UserRole)
+                img_exts = {".png", ".jpg", ".jpeg", ".bmp", ".webp", ".gif", ".ico", ".svg", ".jfif", ".tif", ".tiff"}
+                if path_str and Path(path_str).suffix.lower() in img_exts and Path(path_str).exists():
+                    self._pending_preview_path = path_str
+                    self._pending_preview_pos = event.globalPosition().toPoint()
+                    # 延遲 300ms 觸發，避免滑鼠快速掠過時閃爍
+                    self.preview_timer.start(300)
+                else:
+                    self.hide_preview()
+            else:
+                self.hide_preview()
 
         if not (event.buttons() & Qt.LeftButton) or not self.drag_start_pos:
             super().mouseMoveEvent(event)
@@ -365,6 +411,7 @@ class ShelfFileList(QListWidget):
 
     def _start_external_drag(self, selected_items):
         """執行系統級拖曳，將檔案或文字拖放至外部應用程式"""
+        self.hide_preview()
         if not selected_items:
             return
 
@@ -392,13 +439,19 @@ class ShelfFileList(QListWidget):
             drag.setPixmap(first_icon.pixmap(32, 32))
             drag.setHotSpot(QPoint(16, 16))
 
-        # 根據模式嚴格限制拖放行為
+        # 根據模式嚴格限制拖放行為與 Windows OLE 偏好動作
         if self.shelf_window and getattr(self.shelf_window, 'drag_mode', 'copy') == 'move':
             supported_actions = Qt.CopyAction | Qt.MoveAction
             default_action = Qt.MoveAction
+            # 設定 Windows OLE 的 Preferred DropEffect 為 DROPEFFECT_MOVE (2)
+            # 確保跨磁碟槽（例如 D -> C）拖放至檔案總管時，Windows 執行搬移而非預設複製
+            mime_data.setData("Preferred DropEffect", QByteArray(struct.pack("<I", 2)))
         else:
             supported_actions = Qt.CopyAction
             default_action = Qt.CopyAction
+            # 設定 Windows OLE 的 Preferred DropEffect 為 DROPEFFECT_COPY (1)
+            # 確保同磁碟槽拖放至檔案總管時，Windows 執行複製而非預設搬移
+            mime_data.setData("Preferred DropEffect", QByteArray(struct.pack("<I", 1)))
 
         action = drag.exec(supported_actions, default_action)
         target = drag.target()
@@ -468,6 +521,7 @@ class ShelfFileList(QListWidget):
                 fps[row_a], fps[row_b] = fps[row_b], fps[row_a]
 
     def open_menu(self, pos):
+        self.hide_preview()
         item = self.itemAt(pos)
         if not item:
             menu = QMenu(self)

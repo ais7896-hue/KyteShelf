@@ -1039,7 +1039,7 @@ class KyteShelfWidget(QWidget):
             except Exception:
                 pass
 
-        size_line = f"<span>{dim_info}📦 {size_str}</span><br/>" if size_str else ""
+        size_line = f"<span>{dim_info}📦 {size_str}</span><br/>" if size_str or dim_info else ""
         return f"""<html><body>
 <div style="font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif; max-width: 280px;">
     <div style="font-weight: bold; font-size: 12px; color: #F8FAFC; word-break: break-all; margin-bottom: 2px;">{clean_name}</div>
