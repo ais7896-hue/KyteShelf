@@ -92,7 +92,7 @@ async function handleActivate(request, env, corsHeaders) {
 
   if (record.status !== "active") {
     return jsonResponse(
-      { success: false, message: "此序號已被停用或作廢，請聯繫官方客服" },
+      { success: false, message: "此序號已被停用或作廢，請聯繫官方客服 (support@aisming.com)" },
       403,
       corsHeaders
     );

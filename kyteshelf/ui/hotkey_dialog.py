@@ -498,6 +498,17 @@ class SettingsDialog(QDialog):
         self.btn_reset.clicked.connect(self.restore_defaults)
         bottom_layout.addWidget(self.btn_reset)
 
+        mailto_support = (
+            "mailto:support@aisming.com?subject=%5B%E5%95%8F%E9%A1%8C%E5%9B%9E%E5%A0%B1%5D%20KyteShelf%20%E4%BD%BF%E7%94%A8%E8%AB%AE%E8%A9%A2%20-%20%E8%A8%82%E5%96%AE/%E5%BA%8F%E8%99%9F%EF%BC%9A(%E8%8B%A5%E6%9C%89%E8%AB%8B%E5%A1%AB%E5%AF%AB)"
+            "&body=1.%20%E4%BD%9C%E6%A5%AD%E7%B3%BB%E7%B5%B1%E7%89%88%E6%9C%AC%20(%E4%BE%8B%E5%A6%82%20Win11%2023H2)%EF%BC%9A%0A"
+            "2.%20%E7%99%BC%E7%94%9F%E7%9A%84%E5%95%8F%E9%A1%8C%E6%8F%8F%E8%BF%B0%EF%BC%9A%0A"
+            "3.%20%E6%88%AA%E5%9C%96%E6%88%96%E9%8C%AF%E8%AA%A4%E8%A8%8A%E6%81%AF%EF%BC%9A%0A"
+        )
+        lbl_support = QLabel(f"<a href='{mailto_support}' style='color: #0284C7; text-decoration: none;'>✉ 聯絡技術支援</a>", self)
+        lbl_support.setOpenExternalLinks(True)
+        lbl_support.setStyleSheet("font-size: 11px;")
+        bottom_layout.addWidget(lbl_support)
+
         bottom_layout.addStretch()
 
         self.btn_cancel = QPushButton("取消", self)
