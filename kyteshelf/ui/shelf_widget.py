@@ -23,12 +23,13 @@ from PySide6.QtWidgets import (
 
 from .shelf_list import ShelfFileList
 from .sticky_note import StickyNoteWindow, create_sticky_icon
+from ..i18n import t, i18n
 
 
 class RenameDialog(QDialog):
     def __init__(self, current_name: str, default_name: str, theme_color: str = "#0284C7", parent=None):
         super().__init__(parent)
-        self.setWindowTitle("重新命名置物架")
+        self.setWindowTitle(t("rename.title"))
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setFixedSize(300, 140)
         self.theme_color = theme_color
@@ -98,7 +99,7 @@ class RenameDialog(QDialog):
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(10)
 
-        lbl_hint = QLabel("為此置物架自訂專屬名稱：", self)
+        lbl_hint = QLabel(t("rename.hint"), self)
         layout.addWidget(lbl_hint)
 
         self.input_edit = QLineEdit(self)
@@ -110,22 +111,22 @@ class RenameDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.setContentsMargins(0, 0, 0, 0)
 
-        btn_reset = QPushButton("還原預設", self)
+        btn_reset = QPushButton(t("rename.reset"), self)
         btn_reset.setObjectName("ResetBtn")
         btn_reset.setCursor(Qt.PointingHandCursor)
-        btn_reset.setToolTip("恢復為預設的置物架編號名稱")
+        btn_reset.setToolTip(t("rename.reset_tip"))
         btn_reset.clicked.connect(self.reset_to_default)
         btn_layout.addWidget(btn_reset)
 
         btn_layout.addStretch()
 
-        btn_cancel = QPushButton("取消", self)
+        btn_cancel = QPushButton(t("common.cancel"), self)
         btn_cancel.setObjectName("CancelBtn")
         btn_cancel.setCursor(Qt.PointingHandCursor)
         btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(btn_cancel)
 
-        btn_save = QPushButton("儲存", self)
+        btn_save = QPushButton(t("common.save"), self)
         btn_save.setObjectName("SaveBtn")
         btn_save.setCursor(Qt.PointingHandCursor)
         btn_save.clicked.connect(self.on_save)
@@ -150,7 +151,7 @@ class EditableTitleLabel(QLabel):
         super().__init__(text, parent)
         self.setObjectName("ShelfTitleLabel")
         self.setCursor(Qt.PointingHandCursor)
-        self.setToolTip("按兩下或右鍵重新命名置物架")
+        self.setToolTip(t("shelf.rename_tip"))
 
     def mouseDoubleClickEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -181,12 +182,12 @@ class EditableTitleLabel(QLabel):
             }
         """)
         shelf = self.window()
-        act_paste = menu.addAction("📋 貼上剪貼簿內容 (Ctrl+V)")
-        act_rename = menu.addAction("✏️ 重新命名置物架...")
+        act_paste = menu.addAction(t("menu.paste"))
+        act_rename = menu.addAction(t("menu.rename_shelf"))
         menu.addSeparator()
         is_pinned = getattr(shelf, "is_pinned", False)
-        act_pin = menu.addAction("📌 取消釘選" if is_pinned else "📌 釘選視窗")
-        act_clear = menu.addAction("🗑️ 清空此置物架")
+        act_pin = menu.addAction(t("menu.unpin_window") if is_pinned else t("menu.pin_window"))
+        act_clear = menu.addAction(t("menu.clear_shelf"))
 
         action = menu.exec(event.globalPos())
         if action == act_paste and hasattr(shelf, "paste_from_clipboard"):
@@ -403,7 +404,7 @@ class KyteShelfWidget(QWidget):
         self.btn_new = QPushButton("＋", self.container)
         self.btn_new.setFixedSize(24, 24)
         self.btn_new.setCursor(Qt.PointingHandCursor)
-        self.btn_new.setToolTip("新增置物架")
+        self.btn_new.setToolTip(t("shelf.new_tip"))
         self.btn_new.setStyleSheet("""
             QPushButton {
                 background: transparent;
@@ -428,14 +429,14 @@ class KyteShelfWidget(QWidget):
         self.btn_pin = QPushButton("📌", self.container)
         self.btn_pin.setFixedSize(24, 24)
         self.btn_pin.setCursor(Qt.PointingHandCursor)
-        self.btn_pin.setToolTip("釘選視窗（點擊外部不關閉）")
+        self.btn_pin.setToolTip(t("shelf.pin_tip"))
         self.btn_pin.setStyleSheet(icon_btn_style)
         self.btn_pin.clicked.connect(self.toggle_pin)
 
         self.btn_settings = QPushButton("⚙", self.container)
         self.btn_settings.setFixedSize(24, 24)
         self.btn_settings.setCursor(Qt.PointingHandCursor)
-        self.btn_settings.setToolTip("偏好設定")
+        self.btn_settings.setToolTip(t("shelf.settings_tip"))
         self.btn_settings.setStyleSheet(icon_btn_style)
         if self.manager:
             self.btn_settings.clicked.connect(self.manager.open_settings)
@@ -443,7 +444,7 @@ class KyteShelfWidget(QWidget):
         self.btn_close = QPushButton("✕", self.container)
         self.btn_close.setFixedSize(24, 24)
         self.btn_close.setCursor(Qt.PointingHandCursor)
-        self.btn_close.setToolTip("關閉視窗 (Esc)")
+        self.btn_close.setToolTip(t("shelf.close_tip"))
         self.btn_close.setStyleSheet("""
             QPushButton {
                 background: transparent;
@@ -503,13 +504,13 @@ class KyteShelfWidget(QWidget):
         """)
         icon_circle.setFixedSize(46, 46)
 
-        text_title = QLabel("拖入檔案暫存 ｜ 拖出傳遞", self.empty_page)
-        text_title.setStyleSheet("color: #334155; font-size: 13px; font-weight: 600; border: none; background: transparent;")
+        self.empty_title_label = QLabel(t("shelf.empty_title"), self.empty_page)
+        self.empty_title_label.setStyleSheet("color: #334155; font-size: 13px; font-weight: 600; border: none; background: transparent;")
 
-        text_sub = QLabel("支援各類檔案、圖片截圖、文字與網址", self.empty_page)
-        text_sub.setStyleSheet("color: #94A3B8; font-size: 11px; border: none; background: transparent;")
+        self.empty_sub_label = QLabel(t("shelf.empty_subtitle"), self.empty_page)
+        self.empty_sub_label.setStyleSheet("color: #94A3B8; font-size: 11px; border: none; background: transparent;")
 
-        self.btn_paste_main = QPushButton("📋 貼上剪貼簿內容 (Ctrl+V)", self.empty_page)
+        self.btn_paste_main = QPushButton(t("shelf.paste_btn"), self.empty_page)
         self.btn_paste_main.setCursor(Qt.PointingHandCursor)
         self.btn_paste_main.setStyleSheet(f"""
             QPushButton {{
@@ -534,8 +535,8 @@ class KyteShelfWidget(QWidget):
 
         empty_layout.addStretch()
         empty_layout.addWidget(icon_circle, alignment=Qt.AlignCenter)
-        empty_layout.addWidget(text_title, alignment=Qt.AlignCenter)
-        empty_layout.addWidget(text_sub, alignment=Qt.AlignCenter)
+        empty_layout.addWidget(self.empty_title_label, alignment=Qt.AlignCenter)
+        empty_layout.addWidget(self.empty_sub_label, alignment=Qt.AlignCenter)
         empty_layout.addSpacing(2)
         empty_layout.addWidget(self.btn_paste_main, alignment=Qt.AlignCenter)
         empty_layout.addStretch()
@@ -562,9 +563,9 @@ class KyteShelfWidget(QWidget):
         footer_layout.setSpacing(5)
 
         self.drag_mode = "copy"
-        self.btn_mode = QPushButton("📋 複製模式", self.container)
+        self.btn_mode = QPushButton(t("shelf.mode_copy"), self.container)
         self.btn_mode.setCursor(Qt.PointingHandCursor)
-        self.btn_mode.setToolTip("點擊切換拖曳模式：複製（保留來源檔案） / 搬移（移動來源檔案）")
+        self.btn_mode.setToolTip(t("shelf.mode_tip"))
         self.btn_mode.setStyleSheet("""
             QPushButton {
                 background-color: #F1F5F9;
@@ -583,27 +584,27 @@ class KyteShelfWidget(QWidget):
         """)
         self.btn_mode.clicked.connect(self.toggle_drag_mode)
 
-        self.btn_paste = QPushButton("貼上", self.container)
+        self.btn_paste = QPushButton(t("shelf.paste_action"), self.container)
         self.btn_paste.setCursor(Qt.PointingHandCursor)
-        self.btn_paste.setToolTip("貼上剪貼簿內容 (Ctrl+V)")
+        self.btn_paste.setToolTip(t("shelf.paste_tip"))
         self._restore_toolbar_btn_style(self.btn_paste)
         self.btn_paste.clicked.connect(self.paste_from_clipboard)
 
-        self.btn_select_all = QPushButton("全選", self.container)
+        self.btn_select_all = QPushButton(t("shelf.select_all"), self.container)
         self.btn_select_all.setCursor(Qt.PointingHandCursor)
-        self.btn_select_all.setToolTip("全選項目 (Ctrl+A)")
+        self.btn_select_all.setToolTip(t("shelf.select_all_tip"))
         self._restore_toolbar_btn_style(self.btn_select_all)
         self.btn_select_all.clicked.connect(self.select_all_and_focus)
 
         self.btn_zip = QPushButton("ZIP", self.container)
         self.btn_zip.setCursor(Qt.PointingHandCursor)
-        self.btn_zip.setToolTip("將清單內所有檔案打包成 ZIP")
+        self.btn_zip.setToolTip(t("shelf.zip_tip"))
         self._restore_toolbar_btn_style(self.btn_zip)
         self.btn_zip.clicked.connect(self.zip_all_files)
 
-        self.btn_clear = QPushButton("清空", self.container)
+        self.btn_clear = QPushButton(t("shelf.clear"), self.container)
         self.btn_clear.setCursor(Qt.PointingHandCursor)
-        self.btn_clear.setToolTip("清空置物架所有內容")
+        self.btn_clear.setToolTip(t("shelf.clear_tip"))
         self._restore_clear_btn_style()
         self.btn_clear.clicked.connect(self.clear_files)
 
@@ -671,7 +672,7 @@ class KyteShelfWidget(QWidget):
                 from PySide6.QtWidgets import QMessageBox
                 self.suppress_auto_hide = True
                 try:
-                    QMessageBox.information(self, "Pro 專業版專屬功能", reason, QMessageBox.Ok)
+                    QMessageBox.information(self, t("license.pro_feature_title"), reason, QMessageBox.Ok)
                     self.manager.open_license_dialog()
                 finally:
                     self.suppress_auto_hide = False
@@ -684,7 +685,7 @@ class KyteShelfWidget(QWidget):
             
             save_path, _ = QFileDialog.getSaveFileName(
                 self, 
-                "儲存 ZIP 壓縮檔", 
+                t("shelf.zip_dialog_title"), 
                 default_name, 
                 "ZIP Files (*.zip)"
             )
@@ -708,7 +709,7 @@ class KyteShelfWidget(QWidget):
 
             subprocess.run(f'explorer /select,"{os.path.normpath(save_path)}"')
         except Exception as e:
-            QMessageBox.warning(self, "壓縮失敗", f"打包過程發生錯誤：\n{str(e)}")
+            QMessageBox.warning(self, t("shelf.zip_failed_title"), t("shelf.zip_failed_msg", err=str(e)))
         finally:
             self.suppress_auto_hide = False
 
@@ -773,7 +774,7 @@ class KyteShelfWidget(QWidget):
     def toggle_drag_mode(self):
         if self.drag_mode == "copy":
             self.drag_mode = "move"
-            self.btn_mode.setText("🚚 搬移模式")
+            self.btn_mode.setText(t("shelf.mode_move"))
             self.btn_mode.setStyleSheet("""
                 QPushButton {
                     background-color: #FEF2F2;
@@ -791,7 +792,7 @@ class KyteShelfWidget(QWidget):
             """)
         else:
             self.drag_mode = "copy"
-            self.btn_mode.setText("📋 複製模式")
+            self.btn_mode.setText(t("shelf.mode_copy"))
             self.btn_mode.setStyleSheet("""
                 QPushButton {
                     background-color: #F1F5F9;
@@ -962,14 +963,14 @@ class KyteShelfWidget(QWidget):
             first_line = content.splitlines()[0].strip() if content.splitlines() else ""
             if len(first_line) > 25:
                 first_line = first_line[:22] + "..."
-            item_text = f"📝 {first_line}" if first_line else "📝 自黏便箋"
+            item_text = f"📝 {first_line}" if first_line else f"📝 {t('note.title')}"
 
         path_str = str(filepath)
         self.file_paths.append(path_str)
 
         item = QListWidgetItem()
         item.setText(item_text)
-        item.setToolTip(f"{content}\n\n💡 雙擊開啟自黏便箋｜拖出直接貼入文字")
+        item.setToolTip(t("shelf.text_item_tip", content=content))
         item.setData(Qt.UserRole, path_str)
         item.setData(Qt.UserRole + 1, {
             "type": "sticky_note",
@@ -1063,7 +1064,7 @@ class KyteShelfWidget(QWidget):
                     from PySide6.QtWidgets import QMessageBox
                     self.suppress_auto_hide = True
                     try:
-                        QMessageBox.information(self, "基礎免費版限制", reason, QMessageBox.Ok)
+                        QMessageBox.information(self, t("license.free_limit_title"), reason, QMessageBox.Ok)
                         self.manager.open_license_dialog()
                     finally:
                         self.suppress_auto_hide = False
@@ -1280,13 +1281,62 @@ class KyteShelfWidget(QWidget):
 
     def get_display_name(self) -> str:
         if self.custom_name and self.custom_name.strip():
-            return self.custom_name.strip()
-        return f"置物架 #{self.shelf_id}"
+            name = self.custom_name.strip()
+            # 若符合系統預設自動編號格式（「置物架 #N」或「Shelf #N」），動態跟隨目前語系
+            if re.match(r"^(置物架|Shelf)\s*#\d+$", name, re.IGNORECASE):
+                return t("shelf.default_name_format", id=self.shelf_id)
+            return name
+        return t("shelf.default_name_format", id=self.shelf_id)
+
+    def retranslate_ui(self):
+        """即時更新所有介面文字（響應語系切換）"""
+        # 1. 頂部按鈕 ToolTips
+        if hasattr(self, "btn_new"):
+            self.btn_new.setToolTip(t("shelf.new_tip"))
+        if hasattr(self, "btn_pin"):
+            self.btn_pin.setToolTip(t("shelf.pin_tip"))
+        if hasattr(self, "btn_settings"):
+            self.btn_settings.setToolTip(t("shelf.settings_tip"))
+        if hasattr(self, "btn_close"):
+            self.btn_close.setToolTip(t("shelf.close_tip"))
+
+        # 2. 中間空白區 Empty State
+        if hasattr(self, "empty_title_label"):
+            self.empty_title_label.setText(t("shelf.empty_title"))
+        if hasattr(self, "empty_sub_label"):
+            self.empty_sub_label.setText(t("shelf.empty_subtitle"))
+        if hasattr(self, "btn_paste_main"):
+            self.btn_paste_main.setText(t("shelf.paste_btn"))
+
+        # 3. 底部按鈕文字與 ToolTips
+        if hasattr(self, "btn_mode"):
+            mode_text = t("shelf.mode_move") if self.drag_mode == "move" else t("shelf.mode_copy")
+            self.btn_mode.setText(mode_text)
+            self.btn_mode.setToolTip(t("shelf.mode_tip"))
+
+        if hasattr(self, "btn_paste"):
+            self.btn_paste.setText(t("shelf.paste_action"))
+            self.btn_paste.setToolTip(t("shelf.paste_tip"))
+
+        if hasattr(self, "btn_select_all"):
+            self.btn_select_all.setText(t("shelf.select_all"))
+            self.btn_select_all.setToolTip(t("shelf.select_all_tip"))
+
+        if hasattr(self, "btn_zip"):
+            self.btn_zip.setText("ZIP")
+            self.btn_zip.setToolTip(t("shelf.zip_tip"))
+
+        if hasattr(self, "btn_clear"):
+            self.btn_clear.setText(t("shelf.clear"))
+            self.btn_clear.setToolTip(t("shelf.clear_tip"))
+
+        # 4. 刷新標題
+        self.update_state()
 
     def prompt_rename(self):
         self.suppress_auto_hide = True
         try:
-            default_name = f"置物架 #{self.shelf_id}"
+            default_name = t("shelf.default_name_format", id=self.shelf_id)
             current = self.custom_name if self.custom_name else default_name
             dialog = RenameDialog(
                 current_name=current,

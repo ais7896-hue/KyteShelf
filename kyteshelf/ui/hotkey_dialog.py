@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 
 from ..config import ConfigManager
 from ..license import LicenseManager
+from ..i18n import t, i18n
 from .license_dialog import LicenseDialog
 
 
@@ -22,7 +23,7 @@ class HotkeyRecorderEdit(QLineEdit):
         self.setText(self.display_format)
         self.setAlignment(Qt.AlignCenter)
         self.setCursor(Qt.PointingHandCursor)
-        self.setToolTip("點擊以錄製快捷鍵，按下 Esc 取消")
+        self.setToolTip(t("pref.hotkey_record_tip"))
         self.setFixedHeight(34)
         self.apply_normal_style()
 
@@ -36,7 +37,6 @@ class HotkeyRecorderEdit(QLineEdit):
                 font-size: 13px;
                 font-weight: 600;
                 color: #0F172A;
-                min-height: 32px;
             }
             QLineEdit:hover {
                 border-color: #94A3B8;
@@ -55,7 +55,7 @@ class HotkeyRecorderEdit(QLineEdit):
 
     def start_recording(self):
         self.is_recording = True
-        self.setText("請按下組合鍵（Esc 取消）...")
+        self.setText(t("pref.hotkey_recording"))
         self.setStyleSheet("""
             QLineEdit {
                 background-color: #EFF6FF;
@@ -63,14 +63,15 @@ class HotkeyRecorderEdit(QLineEdit):
                 border-radius: 6px;
                 padding: 0px 10px;
                 font-size: 13px;
-                font-weight: 700;
+                font-weight: 600;
                 color: #1D4ED8;
-                min-height: 32px;
             }
         """)
+        self.grabKeyboard()
 
     def stop_recording(self):
         self.is_recording = False
+        self.releaseKeyboard()
         self.setText(self.display_format)
         self.apply_normal_style()
 
@@ -109,16 +110,7 @@ class HotkeyRecorderEdit(QLineEdit):
         key_name = ""
         pynput_key = ""
 
-        if key == Qt.Key_QuoteLeft:
-            key_name = "`"
-            pynput_key = "`"
-        elif key == Qt.Key_AsciiTilde:
-            key_name = "~"
-            pynput_key = "~"
-        elif key == Qt.Key_Space:
-            key_name = "Space"
-            pynput_key = "<space>"
-        elif Qt.Key_A <= key <= Qt.Key_Z:
+        if Qt.Key_A <= key <= Qt.Key_Z:
             char = chr(key).upper()
             key_name = char
             pynput_key = char.lower()
@@ -127,16 +119,25 @@ class HotkeyRecorderEdit(QLineEdit):
             key_name = char
             pynput_key = char
         elif Qt.Key_F1 <= key <= Qt.Key_F12:
-            num = key - Qt.Key_F1 + 1
-            key_name = f"F{num}"
-            pynput_key = f"<f{num}>"
+            f_num = key - Qt.Key_F1 + 1
+            key_name = f"F{f_num}"
+            pynput_key = f"<f{f_num}>"
+        elif key == Qt.Key_QuoteLeft:
+            key_name = "`"
+            pynput_key = "`"
+        elif key == Qt.Key_Space:
+            key_name = "Space"
+            pynput_key = "<space>"
+        elif key == Qt.Key_Tab:
+            key_name = "Tab"
+            pynput_key = "<tab>"
         else:
-            txt = event.text()
-            if txt and txt.isprintable():
+            txt = event.text().strip()
+            if txt:
                 key_name = txt.upper()
                 pynput_key = txt.lower()
 
-        if not key_name:
+        if not key_name or not parts:
             return
 
         parts.append(key_name)
@@ -152,22 +153,26 @@ class HotkeyRecorderEdit(QLineEdit):
 
 
 class SettingsDialog(QDialog):
-    PRESET_THEMES = [
-        ("#0284C7", "蔚藍"),
-        ("#16A34A", "翡翠綠"),
-        ("#EA580C", "活力橘"),
-        ("#9333EA", "紫羅蘭"),
-        ("#E11D48", "薔薇紅"),
-        ("#0D9488", "石青綠")
-    ]
+    @classmethod
+    def get_preset_themes(cls):
+        return [
+            ("#0284C7", t("theme.blue")),
+            ("#16A34A", t("theme.emerald")),
+            ("#EA580C", t("theme.orange")),
+            ("#9333EA", t("theme.purple")),
+            ("#E11D48", t("theme.rose")),
+            ("#0D9488", t("theme.teal"))
+        ]
 
-    PRESET_HOTKEYS = [
-        ("Ctrl + ` (單手預設)", "<ctrl>+`", "Ctrl + `"),
-        ("Ctrl + Shift + D (Drop)", "<ctrl>+<shift>+d", "Ctrl + Shift + D"),
-        ("Ctrl + Shift + S (Shelf)", "<ctrl>+<shift>+s", "Ctrl + Shift + S"),
-        ("Alt + Space", "<alt>+<space>", "Alt + Space"),
-        ("Ctrl + Alt + V", "<ctrl>+<alt>+v", "Ctrl + Alt + V"),
-    ]
+    @classmethod
+    def get_preset_hotkeys(cls):
+        return [
+            (t("hotkey_preset.ctrl_backtick"), "<ctrl>+`", "Ctrl + `"),
+            ("Ctrl + Shift + D (Drop)", "<ctrl>+<shift>+d", "Ctrl + Shift + D"),
+            ("Ctrl + Shift + S (Shelf)", "<ctrl>+<shift>+s", "Ctrl + Shift + S"),
+            ("Alt + Space", "<alt>+<space>", "Alt + Space"),
+            ("Ctrl + Alt + V", "<ctrl>+<alt>+v", "Ctrl + Alt + V"),
+        ]
 
     def __init__(self, config_manager: ConfigManager, parent=None):
         super().__init__(parent)
@@ -177,29 +182,18 @@ class SettingsDialog(QDialog):
         self.theme_buttons = []
         self.license_dialog = None
         
-        self.setWindowTitle("KyteShelf 偏好設定")
-        self.setMinimumSize(480, 600)
-        self.resize(480, 620)
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setWindowTitle(t("pref.title"))
+        self.setFixedWidth(460)
+        self.setAttribute(Qt.WA_DeleteOnClose)
 
         self.init_ui()
-        self.license_manager.license_changed.connect(self.update_license_badge)
         self.load_values()
-        self.update_license_badge()
-
-    def open_license_dialog(self):
-        if not self.license_dialog:
-            self.license_dialog = LicenseDialog(self.license_manager, self)
-        self.license_dialog.refresh_ui_state()
-        self.license_dialog.show()
-        self.license_dialog.raise_()
-        self.license_dialog.activateWindow()
 
     def update_license_badge(self):
         if hasattr(self, "btn_license_badge"):
             plan = self.license_manager.get_plan_type()
             if plan == "pro":
-                self.btn_license_badge.setText("🟢 專業版已啟用 ✨")
+                self.btn_license_badge.setText(t("license.pro_active"))
                 self.btn_license_badge.setStyleSheet("""
                     QPushButton {
                         background-color: #DCFCE7;
@@ -216,7 +210,7 @@ class SettingsDialog(QDialog):
                 """)
             elif plan == "trial":
                 days = self.license_manager.get_trial_days_left()
-                self.btn_license_badge.setText(f"⏳ 試用中 (剩 {days} 天)")
+                self.btn_license_badge.setText(t("license.trial_remaining", days=days))
                 self.btn_license_badge.setStyleSheet("""
                     QPushButton {
                         background-color: #DBEAFE;
@@ -232,7 +226,7 @@ class SettingsDialog(QDialog):
                     }
                 """)
             else:
-                self.btn_license_badge.setText("🟡 基礎免費版 (升級 Pro)")
+                self.btn_license_badge.setText(t("license.free_upgrade"))
                 self.btn_license_badge.setStyleSheet("""
                     QPushButton {
                         background-color: #FEF3C7;
@@ -265,7 +259,7 @@ class SettingsDialog(QDialog):
 
         # 頂部說明與授權膠囊
         top_header = QHBoxLayout()
-        title_label = QLabel("⚙️ 偏好設定", self)
+        title_label = QLabel(t("pref.header_title"), self)
         title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #0F172A;")
         top_header.addWidget(title_label)
         top_header.addStretch()
@@ -291,21 +285,21 @@ class SettingsDialog(QDialog):
         trigger_layout.setContentsMargins(14, 14, 14, 14)
         trigger_layout.setSpacing(10)
 
-        trigger_title = QLabel("⚡ 召喚與觸發行為", group_trigger)
+        trigger_title = QLabel(t("pref.group_trigger"), group_trigger)
         trigger_title.setStyleSheet("font-weight: bold; font-size: 14px; color: #0F172A; border: none;")
         trigger_layout.addWidget(trigger_title)
 
         # 晃動召喚開關
-        self.cb_shake = QCheckBox("啟用滑鼠晃動召喚 (Shake to Summon)", group_trigger)
+        self.cb_shake = QCheckBox(t("pref.shake_enable"), group_trigger)
         self.cb_shake.setStyleSheet("font-size: 13px; font-weight: 500; border: none;")
         self.cb_shake.toggled.connect(self.on_shake_toggled)
         trigger_layout.addWidget(self.cb_shake)
 
         # 靈敏度調整
         sens_header = QHBoxLayout()
-        sens_label = QLabel("晃動靈敏度：", group_trigger)
+        sens_label = QLabel(t("pref.shake_sens"), group_trigger)
         sens_label.setStyleSheet("font-size: 12px; color: #475569; border: none;")
-        self.sens_val_label = QLabel("標準 (等級 3)", group_trigger)
+        self.sens_val_label = QLabel("", group_trigger)
         self.sens_val_label.setStyleSheet("font-size: 12px; font-weight: bold; color: #0284C7; border: none;")
         sens_header.addWidget(sens_label)
         sens_header.addStretch()
@@ -320,9 +314,9 @@ class SettingsDialog(QDialog):
         trigger_layout.addWidget(self.slider_sens)
 
         sens_ticks = QHBoxLayout()
-        lbl_low = QLabel("偏鈍 (防誤觸)", group_trigger)
-        lbl_mid = QLabel("標準", group_trigger)
-        lbl_high = QLabel("極靈敏", group_trigger)
+        lbl_low = QLabel(t("pref.shake_lbl_low"), group_trigger)
+        lbl_mid = QLabel(t("pref.shake_lbl_mid"), group_trigger)
+        lbl_high = QLabel(t("pref.shake_lbl_high"), group_trigger)
         for lbl in (lbl_low, lbl_mid, lbl_high):
             lbl.setStyleSheet("font-size: 11px; color: #94A3B8; border: none;")
         sens_ticks.addWidget(lbl_low)
@@ -338,7 +332,7 @@ class SettingsDialog(QDialog):
         trigger_layout.addWidget(line_sep)
 
         # 全域快捷鍵
-        hotkey_label = QLabel("全域召喚快捷鍵：", group_trigger)
+        hotkey_label = QLabel(t("pref.hotkey_label"), group_trigger)
         hotkey_label.setStyleSheet("font-size: 12px; color: #475569; border: none;")
         trigger_layout.addWidget(hotkey_label)
 
@@ -389,9 +383,9 @@ class SettingsDialog(QDialog):
                 padding: 4px;
             }
         """)
-        for display_name, pynput_code, pure_display in self.PRESET_HOTKEYS:
+        for display_name, pynput_code, pure_display in self.get_preset_hotkeys():
             self.combo_presets.addItem(display_name, (pynput_code, pure_display))
-        self.combo_presets.addItem("自訂錄製...", "custom")
+        self.combo_presets.addItem(t("pref.hotkey_custom"), "custom")
         self.combo_presets.currentIndexChanged.connect(self.on_preset_hotkey_selected)
 
         hotkey_row.addWidget(self.hotkey_edit, stretch=2)
@@ -400,7 +394,7 @@ class SettingsDialog(QDialog):
 
         layout.addWidget(group_trigger)
 
-        # 區塊 2: 外觀主題
+        # 區塊 2: 外觀與語言
         group_appearance = QFrame(self)
         group_appearance.setStyleSheet("""
             QFrame {
@@ -413,15 +407,49 @@ class SettingsDialog(QDialog):
         app_layout = QVBoxLayout(group_appearance)
         app_layout.setSpacing(10)
 
-        app_title = QLabel("🎨 外觀與主題色", group_appearance)
+        app_title = QLabel(t("pref.group_appearance"), group_appearance)
         app_title.setStyleSheet("font-weight: bold; font-size: 14px; color: #0F172A; border: none;")
         app_layout.addWidget(app_title)
 
-        # 預設色彩按鈕
+        # 語言設定
+        lang_row = QHBoxLayout()
+        lang_label = QLabel(t("pref.language"), group_appearance)
+        lang_label.setStyleSheet("font-size: 12px; color: #475569; border: none;")
+        
+        self.combo_language = QComboBox(group_appearance)
+        self.combo_language.setFixedHeight(32)
+        self.combo_language.setStyleSheet("""
+            QComboBox {
+                border: 1px solid #CBD5E1;
+                border-radius: 6px;
+                padding-left: 10px;
+                padding-right: 24px;
+                background-color: #FFFFFF;
+                font-size: 12px;
+                color: #334155;
+            }
+            QComboBox:hover {
+                border-color: #94A3B8;
+            }
+        """)
+        self.combo_language.addItem(t("pref.lang_system"), "system")
+        self.combo_language.addItem(t("pref.lang_zh_tw"), "zh_TW")
+        self.combo_language.addItem(t("pref.lang_en_us"), "en_US")
+        
+        lang_row.addWidget(lang_label)
+        lang_row.addStretch()
+        lang_row.addWidget(self.combo_language)
+        app_layout.addLayout(lang_row)
+
+        # 預設色彩標題與按鈕
+        color_header = QLabel(t("pref.theme_color"), group_appearance)
+        color_header.setStyleSheet("font-size: 12px; color: #475569; border: none;")
+        app_layout.addWidget(color_header)
+
         color_layout = QHBoxLayout()
         color_layout.setSpacing(8)
         self.theme_buttons = []
-        for hex_code, color_name in self.PRESET_THEMES:
+        for hex_code, color_name in self.get_preset_themes():
             btn = QPushButton(group_appearance)
             btn.setFixedSize(30, 30)
             btn.setCursor(Qt.PointingHandCursor)
@@ -460,13 +488,13 @@ class SettingsDialog(QDialog):
         self.preview_layout = QHBoxLayout(self.preview_card)
         self.preview_layout.setContentsMargins(14, 8, 14, 8)
         
-        self.preview_title = QLabel("置物架 #1", self.preview_card)
+        self.preview_title = QLabel("KyteShelf #1", self.preview_card)
         self.preview_title.setStyleSheet("font-weight: bold; font-size: 13px; border: none; background: transparent;")
         
         self.preview_btn_new = QLabel("＋", self.preview_card)
         self.preview_btn_new.setStyleSheet("font-size: 16px; font-weight: bold; border: none; background: transparent;")
         
-        self.preview_desc = QLabel("🎨 即時樣式預覽", self.preview_card)
+        self.preview_desc = QLabel("🎨 Theme Preview", self.preview_card)
         self.preview_desc.setStyleSheet("color: #64748B; font-size: 12px; border: none; background: transparent;")
 
         self.preview_layout.addWidget(self.preview_title)
@@ -481,7 +509,7 @@ class SettingsDialog(QDialog):
         bottom_layout = QHBoxLayout()
         bottom_layout.setSpacing(10)
 
-        self.btn_reset = QPushButton("恢復預設值", self)
+        self.btn_reset = QPushButton(t("common.reset"), self)
         self.btn_reset.setCursor(Qt.PointingHandCursor)
         self.btn_reset.setStyleSheet("""
             QPushButton {
@@ -499,19 +527,16 @@ class SettingsDialog(QDialog):
         bottom_layout.addWidget(self.btn_reset)
 
         mailto_support = (
-            "mailto:support@aisming.com?subject=%5B%E5%95%8F%E9%A1%8C%E5%9B%9E%E5%A0%B1%5D%20KyteShelf%20%E4%BD%BF%E7%94%A8%E8%AB%AE%E8%A9%A2%20-%20%E8%A8%82%E5%96%AE/%E5%BA%8F%E8%99%9F%EF%BC%9A(%E8%8B%A5%E6%9C%89%E8%AB%8B%E5%A1%AB%E5%AF%AB)"
-            "&body=1.%20%E4%BD%9C%E6%A5%AD%E7%B3%BB%E7%B5%B1%E7%89%88%E6%9C%AC%20(%E4%BE%8B%E5%A6%82%20Win11%2023H2)%EF%BC%9A%0A"
-            "2.%20%E7%99%BC%E7%94%9F%E7%9A%84%E5%95%8F%E9%A1%8C%E6%8F%8F%E8%BF%B0%EF%BC%9A%0A"
-            "3.%20%E6%88%AA%E5%9C%96%E6%88%96%E9%8C%AF%E8%AA%A4%E8%A8%8A%E6%81%AF%EF%BC%9A%0A"
+            "mailto:support@aisming.com?subject=%5BSupport%5D%20KyteShelf%20Inquiry"
         )
-        lbl_support = QLabel(f"<a href='{mailto_support}' style='color: #0284C7; text-decoration: none;'>✉ 聯絡技術支援</a>", self)
+        lbl_support = QLabel(f"<a href='{mailto_support}' style='color: #0284C7; text-decoration: none;'>✉ Support</a>", self)
         lbl_support.setOpenExternalLinks(True)
         lbl_support.setStyleSheet("font-size: 11px;")
         bottom_layout.addWidget(lbl_support)
 
         bottom_layout.addStretch()
 
-        self.btn_cancel = QPushButton("取消", self)
+        self.btn_cancel = QPushButton(t("common.cancel"), self)
         self.btn_cancel.setCursor(Qt.PointingHandCursor)
         self.btn_cancel.setStyleSheet("""
             QPushButton {
@@ -529,7 +554,7 @@ class SettingsDialog(QDialog):
         self.btn_cancel.clicked.connect(self.reject)
         bottom_layout.addWidget(self.btn_cancel)
 
-        self.btn_save = QPushButton("儲存並套用", self)
+        self.btn_save = QPushButton(t("common.apply"), self)
         self.btn_save.setCursor(Qt.PointingHandCursor)
         self.btn_save.setStyleSheet("""
             QPushButton {
@@ -575,6 +600,14 @@ class SettingsDialog(QDialog):
 
         self.select_color(cfg.get("theme_color", "#0284C7"))
 
+        # 同步語言下拉選單
+        cur_lang = cfg.get("language", "system")
+        idx = self.combo_language.findData(cur_lang)
+        if idx >= 0:
+            self.combo_language.setCurrentIndex(idx)
+
+        self.update_license_badge()
+
     def on_shake_toggled(self, checked):
         self.slider_sens.setEnabled(checked)
         self.sens_val_label.setEnabled(checked)
@@ -583,14 +616,8 @@ class SettingsDialog(QDialog):
         self.update_sens_label(val)
 
     def update_sens_label(self, val):
-        labels = {
-            1: "偏鈍 (防誤觸)",
-            2: "略鈍",
-            3: "標準 (推薦)",
-            4: "靈敏",
-            5: "極靈敏"
-        }
-        self.sens_val_label.setText(f"{labels.get(val, '')} (等級 {val})")
+        desc = t(f"pref.shake_desc_{val}")
+        self.sens_val_label.setText(t("pref.shake_level_format", desc=desc, level=val))
 
     def on_preset_hotkey_selected(self, index):
         if index < 0:
@@ -664,14 +691,27 @@ class SettingsDialog(QDialog):
         self.hotkey_edit.set_hotkey(defaults["hotkey"], defaults["hotkey_display"])
         self.combo_presets.setCurrentIndex(0)
         self.select_color(defaults["theme_color"])
+        idx = self.combo_language.findData(defaults.get("language", "system"))
+        if idx >= 0:
+            self.combo_language.setCurrentIndex(idx)
 
     def save_and_apply(self):
+        selected_lang = self.combo_language.currentData()
         new_cfg = {
             "shake_enabled": self.cb_shake.isChecked(),
             "shake_sensitivity": self.slider_sens.value(),
             "hotkey": self.hotkey_edit.pynput_format,
             "hotkey_display": self.hotkey_edit.display_format,
-            "theme_color": self.selected_theme_color
+            "theme_color": self.selected_theme_color,
+            "language": selected_lang
         }
         self.config_manager.save_config(new_cfg)
         self.accept()
+
+    def open_license_dialog(self):
+        if not self.license_dialog:
+            self.license_dialog = LicenseDialog(self.license_manager, self)
+            self.license_dialog.license_updated.connect(self.update_license_badge)
+        self.license_dialog.show()
+        self.license_dialog.raise_()
+        self.license_dialog.activateWindow()

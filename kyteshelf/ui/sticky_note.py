@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (
     QSizeGrip
 )
 
+from ..i18n import t
+
 
 def create_sticky_icon(note_type: str = "text") -> QIcon:
     """動態繪製精美的自黏標籤（Sticky Note）圖示"""
@@ -140,7 +142,7 @@ class StickyNoteWindow(QWidget):
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(0, 0, 0, 0)
 
-        type_icon = "🔗 網址標籤" if self.note_type == "url" else "📝 自黏便箋"
+        type_icon = f"🔗 {t('note.url_tag')}" if self.note_type == "url" else f"📝 {t('note.title')}"
         self.title_label = QLabel(type_icon, self.container)
         self.title_label.setStyleSheet(f"font-weight: bold; color: {header_color}; font-size: 12px;")
 
@@ -150,7 +152,7 @@ class StickyNoteWindow(QWidget):
             self.btn_open_url = QPushButton("🌐", self.container)
             self.btn_open_url.setFixedSize(22, 22)
             self.btn_open_url.setCursor(Qt.PointingHandCursor)
-            self.btn_open_url.setToolTip("在預設瀏覽器開啟網址")
+            self.btn_open_url.setToolTip(t("note.open_browser_tip"))
             self.btn_open_url.setStyleSheet("""
                 QPushButton { border: none; background: transparent; font-size: 13px; border-radius: 4px; }
                 QPushButton:hover { background: rgba(0, 0, 0, 0.08); }
@@ -162,7 +164,7 @@ class StickyNoteWindow(QWidget):
         self.btn_copy = QPushButton("📋", self.container)
         self.btn_copy.setFixedSize(22, 22)
         self.btn_copy.setCursor(Qt.PointingHandCursor)
-        self.btn_copy.setToolTip("複製內容至剪貼簿")
+        self.btn_copy.setToolTip(t("note.copy_tip"))
         self.btn_copy.setStyleSheet("""
             QPushButton { border: none; background: transparent; font-size: 12px; border-radius: 4px; }
             QPushButton:hover { background: rgba(0, 0, 0, 0.08); }
@@ -173,7 +175,7 @@ class StickyNoteWindow(QWidget):
         self.btn_pin = QPushButton("📌", self.container)
         self.btn_pin.setFixedSize(22, 22)
         self.btn_pin.setCursor(Qt.PointingHandCursor)
-        self.btn_pin.setToolTip("切換置頂固定")
+        self.btn_pin.setToolTip(t("note.pin_tip"))
         self.btn_pin.setStyleSheet("border: none; background: rgba(0, 0, 0, 0.12); border-radius: 4px; font-size: 12px;")
         self.btn_pin.clicked.connect(self.toggle_pin)
 
@@ -181,7 +183,7 @@ class StickyNoteWindow(QWidget):
         self.btn_close = QPushButton("✕", self.container)
         self.btn_close.setFixedSize(22, 22)
         self.btn_close.setCursor(Qt.PointingHandCursor)
-        self.btn_close.setToolTip("關閉便箋視窗")
+        self.btn_close.setToolTip(t("note.close_tip"))
         self.btn_close.setStyleSheet("""
             QPushButton { border: none; color: #64748B; font-weight: bold; font-size: 13px; border-radius: 4px; }
             QPushButton:hover { background: rgba(0, 0, 0, 0.1); color: #0F172A; }
@@ -200,7 +202,7 @@ class StickyNoteWindow(QWidget):
         self.text_edit = QTextEdit(self.container)
         self.text_edit.setFrameShape(QTextEdit.NoFrame)
         self.text_edit.setPlainText(self.content)
-        self.text_edit.setPlaceholderText("請在此輸入便箋內容...")
+        self.text_edit.setPlaceholderText(t("note.placeholder"))
         self.text_edit.setStyleSheet(f"""
             QTextEdit {{
                 background-color: {bg_color};

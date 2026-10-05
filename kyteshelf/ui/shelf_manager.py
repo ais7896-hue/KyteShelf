@@ -11,6 +11,7 @@ from ..config import ConfigManager
 from ..license import LicenseManager
 from ..session import SessionManager
 from ..utils import get_resource_path
+from ..i18n import t, i18n
 from .hotkey_dialog import SettingsDialog
 from .license_dialog import LicenseDialog
 from .shelf_widget import KyteShelfWidget, DropShelfWidget
@@ -30,6 +31,7 @@ class ShelfManager(QObject):
 
         self.config_manager.config_changed.connect(self.on_config_changed)
         self.license_manager.license_changed.connect(self.update_tray_license_status)
+        i18n.language_changed.connect(self.on_language_changed)
         
         self.watcher = QFileSystemWatcher(self)
         self.watcher.directoryChanged.connect(self.on_directory_changed)
@@ -39,6 +41,13 @@ class ShelfManager(QObject):
         self.session_manager = SessionManager(config_manager=self.config_manager)
         self.init_tray()
         self.restore_session()
+
+    def on_language_changed(self, lang):
+        """當語言切換時重建托盤選單並通知所有置物架重譯介面"""
+        self.rebuild_tray_menu()
+        for shelf in self.shelves:
+            if hasattr(shelf, "retranslate_ui"):
+                shelf.retranslate_ui()
 
     def on_config_changed(self, new_config):
         """當設定變更時即時套用主題色彩"""
@@ -50,8 +59,16 @@ class ShelfManager(QObject):
 
     def open_settings(self):
         """開啟偏好設定視窗"""
-        if not self.settings_dialog:
-            self.settings_dialog = SettingsDialog(self.config_manager)
+        if self.settings_dialog is not None:
+            try:
+                self.settings_dialog.close()
+                self.settings_dialog.deleteLater()
+            except RuntimeError:
+                pass
+            self.settings_dialog = None
+
+        self.settings_dialog = SettingsDialog(self.config_manager)
+        self.settings_dialog.destroyed.connect(lambda: setattr(self, "settings_dialog", None))
         self.settings_dialog.load_values()
         self.settings_dialog.show()
         self.settings_dialog.raise_()
@@ -59,8 +76,16 @@ class ShelfManager(QObject):
 
     def open_license_dialog(self):
         """開啟軟體授權管理視窗"""
-        if not self.license_dialog:
-            self.license_dialog = LicenseDialog(self.license_manager)
+        if self.license_dialog is not None:
+            try:
+                self.license_dialog.close()
+                self.license_dialog.deleteLater()
+            except RuntimeError:
+                pass
+            self.license_dialog = None
+
+        self.license_dialog = LicenseDialog(self.license_manager)
+        self.license_dialog.destroyed.connect(lambda: setattr(self, "license_dialog", None))
         self.license_dialog.refresh_ui_state()
         self.license_dialog.show()
         self.license_dialog.raise_()
@@ -71,12 +96,12 @@ class ShelfManager(QObject):
         if hasattr(self, "act_license"):
             plan = self.license_manager.get_plan_type()
             if plan == "pro":
-                self.act_license.setText("✨ 專業版授權 (已開通)")
+                self.act_license.setText(t("tray.license_status_pro"))
             elif plan == "trial":
                 days = self.license_manager.get_trial_days_left()
-                self.act_license.setText(f"⏳ 專業版試用中 (剩餘 {days} 天)...")
+                self.act_license.setText(t("tray.license_status_trial", days=days))
             else:
-                self.act_license.setText("🟡 基礎免費版 (升級 Pro NT$ 399)...")
+                self.act_license.setText(t("tray.license_status_free"))
         
     def init_tray(self):
         self.tray_icon = QSystemTrayIcon(self)
@@ -88,8 +113,12 @@ class ShelfManager(QObject):
         else:
             self.tray_icon.setIcon(QApplication.style().standardIcon(QStyle.SP_DirIcon))
             
-        self.tray_icon.setToolTip("KyteShelf")
-        
+        self.tray_icon.setToolTip(t("tray.tip"))
+        self.rebuild_tray_menu()
+        self.tray_icon.show()
+
+    def rebuild_tray_menu(self):
+        self.tray_icon.setToolTip(t("tray.tip"))
         self.tray_menu = QMenu()
         self.tray_menu.setStyleSheet("""
             QMenu {
@@ -109,46 +138,47 @@ class ShelfManager(QObject):
             }
         """)
         
-        act_show = self.tray_menu.addAction("顯示所有置物架")
+        act_show = self.tray_menu.addAction(t("tray.show_all"))
         act_show.triggered.connect(self.show_all)
 
-        act_paste = self.tray_menu.addAction("📋 剪貼簿快速入架")
+        act_paste = self.tray_menu.addAction(t("tray.paste_clipboard"))
         act_paste.triggered.connect(self.paste_clipboard_to_shelf)
 
-        self.shelves_menu = self.tray_menu.addMenu("📑 置物架清單")
+        self.shelves_menu = self.tray_menu.addMenu(t("tray.shelves_list"))
         self.tray_menu.aboutToShow.connect(self.update_tray_shelves_menu)
         self.tray_menu.addSeparator()
 
-        act_settings = self.tray_menu.addAction("⚙️ 偏好設定...")
+        act_settings = self.tray_menu.addAction(t("tray.preferences"))
         act_settings.triggered.connect(self.open_settings)
 
-        self.act_license = self.tray_menu.addAction("🔑 軟體授權 / 開通專業版...")
+        self.act_license = self.tray_menu.addAction(t("tray.license_mgr"))
         self.act_license.triggered.connect(self.open_license_dialog)
         self.update_tray_license_status()
         self.tray_menu.addSeparator()
         
-        act_watch = self.tray_menu.addAction("👀 設定監控資料夾...")
+        act_watch = self.tray_menu.addAction(t("tray.watch_folder"))
         act_watch.triggered.connect(self.set_watch_folder)
-        self.act_stop_watch = self.tray_menu.addAction("停止監控資料夾")
+        self.act_stop_watch = self.tray_menu.addAction(t("tray.stop_watch"))
         self.act_stop_watch.triggered.connect(self.stop_watch_folder)
-        self.act_stop_watch.setVisible(False)
+        self.act_stop_watch.setVisible(bool(self.watched_dir))
+        if self.watched_dir:
+            self.act_stop_watch.setText(t("tray.stop_watch_named", name=Path(self.watched_dir).name))
         self.tray_menu.addSeparator()
         
-        act_new = self.tray_menu.addAction("新增置物架")
+        act_new = self.tray_menu.addAction(t("tray.summon_shelf"))
         act_new.triggered.connect(self.create_and_show_shelf)
         self.tray_menu.addSeparator()
         
-        act_exit = self.tray_menu.addAction("退出")
+        act_exit = self.tray_menu.addAction(t("tray.quit"))
         act_exit.triggered.connect(QApplication.quit)
         
         self.tray_icon.setContextMenu(self.tray_menu)
-        self.tray_icon.show()
 
     def update_tray_shelves_menu(self):
         self.shelves_menu.clear()
         valid_shelves = [s for s in self.shelves if s.isVisible() or s.file_paths or s.is_pinned or s.custom_name]
         if not valid_shelves:
-            act_none = self.shelves_menu.addAction("(目前無置物架)")
+            act_none = self.shelves_menu.addAction(t("tray.no_shelves"))
             act_none.setEnabled(False)
             return
 
@@ -160,17 +190,17 @@ class ShelfManager(QObject):
             
             sub_menu = self.shelves_menu.addMenu(status_text)
             
-            act_locate = sub_menu.addAction("👀 顯示 / 置頂")
+            act_locate = sub_menu.addAction(t("tray.locate_shelf"))
             act_locate.triggered.connect(lambda checked=False, s=shelf: self.locate_shelf(s))
 
-            act_paste = sub_menu.addAction("📋 貼入剪貼簿內容")
+            act_paste = sub_menu.addAction(t("tray.paste_to_shelf"))
             act_paste.triggered.connect(lambda checked=False, s=shelf: self.paste_to_specific_shelf(s))
             
-            act_rename = sub_menu.addAction("✏️ 重新命名...")
+            act_rename = sub_menu.addAction(t("tray.rename_shelf"))
             act_rename.triggered.connect(lambda checked=False, s=shelf: self.rename_shelf(s))
             
             sub_menu.addSeparator()
-            act_clear = sub_menu.addAction("🗑️ 清空此置物架")
+            act_clear = sub_menu.addAction(t("tray.clear_shelf"))
             act_clear.triggered.connect(lambda checked=False, s=shelf: s.clear_files())
 
     def locate_shelf(self, shelf):
@@ -211,14 +241,14 @@ class ShelfManager(QObject):
         if added > 0:
             self.tray_icon.showMessage(
                 "KyteShelf",
-                f"已從剪貼簿加入 {added} 個項目至「{target_shelf.get_display_name()}」！",
+                t("tray.pasted_notify", count=added, name=target_shelf.get_display_name()),
                 QSystemTrayIcon.Information,
                 2000
             )
         else:
             self.tray_icon.showMessage(
                 "KyteShelf",
-                "剪貼簿內無可貼入的內容",
+                t("tray.pasted_empty"),
                 QSystemTrayIcon.Warning,
                 2000
             )
@@ -265,7 +295,7 @@ class ShelfManager(QObject):
         can_create, reason = self.license_manager.can_create_shelf(len(visible_shelves))
         if not can_create:
             from PySide6.QtWidgets import QMessageBox
-            QMessageBox.information(None, "基礎免費版限制", reason, QMessageBox.Ok)
+            QMessageBox.information(None, t("license.free_limit_title"), reason, QMessageBox.Ok)
             self.open_license_dialog()
             return
 
@@ -310,11 +340,11 @@ class ShelfManager(QObject):
         can_watch, reason = self.license_manager.can_use_folder_watch()
         if not can_watch:
             from PySide6.QtWidgets import QMessageBox
-            QMessageBox.information(None, "Pro 專業版專屬功能", reason, QMessageBox.Ok)
+            QMessageBox.information(None, t("license.pro_feature_title"), reason, QMessageBox.Ok)
             self.open_license_dialog()
             return
 
-        folder = QFileDialog.getExistingDirectory(None, "選擇要監控的資料夾")
+        folder = QFileDialog.getExistingDirectory(None, t("msg.select_watch_folder"))
         if folder:
             self.stop_watch_folder()
             self.watched_dir = folder
@@ -326,8 +356,8 @@ class ShelfManager(QObject):
                 self.known_files = set()
                 
             self.act_stop_watch.setVisible(True)
-            self.act_stop_watch.setText(f"停止監控: {Path(folder).name}")
-            self.tray_icon.showMessage("置物架", f"已開始監控：{Path(folder).name}\n新檔案會自動加入置物架！", QSystemTrayIcon.Information, 3000)
+            self.act_stop_watch.setText(t("tray.stop_watch_named", name=Path(folder).name))
+            self.tray_icon.showMessage("KyteShelf", t("tray.watch_started", name=Path(folder).name), QSystemTrayIcon.Information, 3000)
 
     def stop_watch_folder(self):
         if self.watched_dir:
@@ -335,7 +365,7 @@ class ShelfManager(QObject):
             self.watched_dir = ""
             self.known_files.clear()
             self.act_stop_watch.setVisible(False)
-            self.tray_icon.showMessage("置物架", "已停止監控資料夾", QSystemTrayIcon.Information, 2000)
+            self.tray_icon.showMessage("KyteShelf", t("tray.watch_stopped"), QSystemTrayIcon.Information, 2000)
             
     def on_directory_changed(self, path):
         if path != self.watched_dir:

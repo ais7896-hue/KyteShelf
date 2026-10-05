@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 
 from .sticky_note import StickyNoteWindow
 from .image_preview import ImagePreviewPopup
+from ..i18n import t
 
 
 class ShelfItemDelegate(QStyledItemDelegate):
@@ -542,12 +543,12 @@ class ShelfFileList(QListWidget):
                     color: #0284C7;
                 }
             """)
-            act_paste = menu.addAction("📋 貼上剪貼簿內容 (Ctrl+V)")
-            act_rename = menu.addAction("✏️ 重新命名置物架...")
+            act_paste = menu.addAction(t("menu.paste"))
+            act_rename = menu.addAction(t("menu.rename_shelf"))
             menu.addSeparator()
             is_pinned = getattr(self.shelf_window, "is_pinned", False)
-            act_pin = menu.addAction("📌 取消釘選" if is_pinned else "📌 釘選視窗")
-            act_clear = menu.addAction("🗑️ 清空置物架")
+            act_pin = menu.addAction(t("menu.unpin_window") if is_pinned else t("menu.pin_window"))
+            act_clear = menu.addAction(t("menu.clear_shelf"))
 
             action = menu.exec(self.mapToGlobal(pos))
             if action == act_paste and hasattr(self.shelf_window, "paste_from_clipboard"):
@@ -588,24 +589,24 @@ class ShelfFileList(QListWidget):
         act_open_browser = None
 
         if is_sticky:
-            act_open_note = menu.addAction("📝 開啟自黏便箋")
+            act_open_note = menu.addAction(t("menu.open_note"))
             if note_data.get("note_type") == "url":
-                act_copy_content = menu.addAction("📋 複製網址")
-                act_open_browser = menu.addAction("🌐 在預設瀏覽器開啟")
+                act_copy_content = menu.addAction(t("menu.copy_url"))
+                act_open_browser = menu.addAction(t("menu.open_browser"))
             else:
-                act_copy_content = menu.addAction("📋 複製文字內容")
+                act_copy_content = menu.addAction(t("menu.copy_text"))
             menu.addSeparator()
 
-        act_paste = menu.addAction("📋 貼上剪貼簿內容 (Ctrl+V)")
+        act_paste = menu.addAction(t("menu.paste"))
         menu.addSeparator()
 
-        act_show = menu.addAction("在檔案總管中顯示")
-        act_copy_path = menu.addAction("複製路徑")
-        act_zip = menu.addAction("全部打包成 ZIP")
+        act_show = menu.addAction(t("menu.show_in_explorer"))
+        act_copy_path = menu.addAction(t("menu.copy_path"))
+        act_zip = menu.addAction(t("menu.zip_all"))
         
         act_attach_outlook = None
         if not is_sticky:
-            act_attach_outlook = menu.addAction("附加到目前 Outlook 郵件")
+            act_attach_outlook = menu.addAction(t("menu.attach_outlook"))
         
         selected_paths = [item.data(Qt.UserRole) for item in self.selectedItems()]
         image_extensions = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
@@ -613,10 +614,10 @@ class ShelfFileList(QListWidget):
 
         if is_all_images and len(selected_paths) > 0:
             menu.addSeparator()
-            img_menu = menu.addMenu("🖼️ 影像快速處理")
-            act_img_resize_50 = img_menu.addAction("縮小至 50%")
-            act_img_convert_jpg = img_menu.addAction("轉換為 JPG")
-            act_img_convert_png = img_menu.addAction("轉換為 PNG")
+            img_menu = menu.addMenu(t("menu.image_tools"))
+            act_img_resize_50 = img_menu.addAction(t("menu.resize_50"))
+            act_img_convert_jpg = img_menu.addAction(t("menu.convert_jpg"))
+            act_img_convert_png = img_menu.addAction(t("menu.convert_png"))
         else:
             act_img_resize_50 = None
             act_img_convert_jpg = None
@@ -624,7 +625,7 @@ class ShelfFileList(QListWidget):
 
         menu.addSeparator()
         sel_count = len(self.selectedItems())
-        del_label = f"🗑️ 從置物架移除 ({sel_count} 項) (Delete)" if sel_count > 1 else "🗑️ 從置物架移除 (Delete)"
+        del_label = f"🗑️ {t('menu.remove_selected', count=sel_count)} (Delete)" if sel_count > 1 else f"🗑️ {t('menu.remove_item')} (Delete)"
         act_delete = menu.addAction(del_label)
 
         action = menu.exec(self.mapToGlobal(pos))
@@ -682,9 +683,9 @@ class ShelfFileList(QListWidget):
                     self.takeItem(self.row(item))
                 self.shelf_window.update_state()
             else:
-                QMessageBox.warning(self.shelf_window, "錯誤", "找不到正在獨立視窗編輯的 Outlook 郵件。\n請先在 Outlook「彈出」一封新郵件或回覆郵件視窗。")
+                QMessageBox.warning(self.shelf_window, t("common.error"), t("msg.outlook_no_window"))
         except Exception as e:
-            QMessageBox.warning(self.shelf_window, "錯誤", f"無法連接到 Outlook，請確認 Outlook 已經開啟：\n{str(e)}")
+            QMessageBox.warning(self.shelf_window, t("common.error"), t("msg.outlook_connect_fail", err=str(e)))
 
     def process_images(self, items, action_type):
         for item in items:

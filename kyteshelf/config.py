@@ -2,6 +2,7 @@ import os
 import json
 from pathlib import Path
 from PySide6.QtCore import QObject, Signal
+from .i18n import i18n
 
 
 class ConfigManager(QObject):
@@ -12,7 +13,8 @@ class ConfigManager(QObject):
         "shake_sensitivity": 3,
         "hotkey": "<ctrl>+`",
         "hotkey_display": "Ctrl + `",
-        "theme_color": "#0284C7"
+        "theme_color": "#0284C7",
+        "language": "system"
     }
 
     def __init__(self):
@@ -20,6 +22,7 @@ class ConfigManager(QObject):
         self.config = self.DEFAULT_CONFIG.copy()
         self.config_file = self._get_config_path()
         self.config = self.load_config()
+        i18n.apply_language(self.config.get("language", "system"))
 
     def _get_config_path(self):
         import sys
@@ -70,6 +73,8 @@ class ConfigManager(QObject):
 
     def save_config(self, new_config):
         self.config.update(new_config)
+        if "language" in new_config:
+            i18n.apply_language(new_config["language"])
         try:
             with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=4, ensure_ascii=False)
