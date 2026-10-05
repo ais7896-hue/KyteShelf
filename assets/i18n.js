@@ -110,10 +110,14 @@ const TRANSLATIONS = {
         "faq.q5": "Q：一次性買斷的維護期與後續更新政策是什麼？",
         "faq.a5": "本商品為一次性買斷，享有一年內免費維護與 Bug 修復。若未來作業系統大型改版（如 Windows 升級）導致軟體需重構，新版本將另行販售。",
 
+        "footer.brand": "KyteShelf 桌面置物架",
         "footer.slogan": "© 2026 KyteShelf. All rights reserved. 專為提升桌面工作效率而生。",
+        "footer.download": "免費下載",
+        "footer.pricing": "授權購買",
         "footer.terms": "服務條款",
         "footer.privacy": "隱私權政策",
-        "footer.support": "技術支援"
+        "footer.support": "技術支援",
+        "footer.contact": "技術支援與售後聯絡：<a href=\"mailto:support@aisming.com?subject=%5B%E5%95%8F%E9%A1%8C%E5%9B%9E%E5%A0%B1%5D%20KyteShelf%20%E4%BD%BF%E7%94%A8%E8%AB%AE%E8%A9%A2\" class=\"text-blue-600 hover:underline font-semibold\">support@aisming.com</a> · 全年無休客服信箱"
     },
 
     en_US: {
@@ -223,10 +227,14 @@ const TRANSLATIONS = {
         "faq.q5": "Q: What is the maintenance period and update policy for perpetual purchases?",
         "faq.a5": "Licenses are one-time perpetual purchases including one year of free maintenance and bug fixes. If future major operating system overhauls (such as major Windows version upgrades) necessitate substantial software refactoring, new major releases will be sold separately.",
 
+        "footer.brand": "KyteShelf Desktop Shelf",
         "footer.slogan": "© 2026 KyteShelf. All rights reserved. Built to elevate Windows desktop productivity.",
+        "footer.download": "Free Download",
+        "footer.pricing": "Purchase License",
         "footer.terms": "Terms of Service",
         "footer.privacy": "Privacy Policy",
-        "footer.support": "Technical Support"
+        "footer.support": "Technical Support",
+        "footer.contact": "Support & Inquiries: <a href=\"mailto:support@aisming.com?subject=%5BInquiry%5D%20KyteShelf%20Support\" class=\"text-blue-600 hover:underline font-semibold\">support@aisming.com</a> · 24/7 Customer Service"
     }
 };
 
@@ -261,6 +269,12 @@ function applyLanguage(lang) {
         if (dict[key]) {
             el.innerHTML = dict[key];
         }
+    });
+
+    // 智能切換操作指南目標網址
+    const guideLinks = document.querySelectorAll('a[href="guide.html"], a[href="guide_en.html"]');
+    guideLinks.forEach(a => {
+        a.href = lang === 'en_US' ? 'guide_en.html' : 'guide.html';
     });
 
     const langBtnText = document.getElementById('lang-btn-text');
