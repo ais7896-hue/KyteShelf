@@ -228,7 +228,7 @@ TRANSLATIONS = {
     "license.btn_deactivate": "🔄 解除此電腦綁定 (更換電腦釋放名額)",
     "license.hw_title": "本機識別碼：",
     "license.btn_copy_hw": "複製完整識別碼",
-    "license.btn_buy_shopee": "🛒 前往蝦皮官方賣場購買序號 (NT$ 399)",
+    "license.btn_buy_shopee": "🛒 前往官方網站購買正版序號 (NT$ 399)",
     "license.support_footer": "技術支援與售後聯絡：",
     "license.empty_key_warn": "請先輸入授權序號",
     "license.connecting": "正在連接授權伺服器...",

@@ -94,8 +94,8 @@ const TRANSLATIONS = {
         "price.feat2": "單組授權支援同時啟用 2 台個人 Windows 裝置",
         "price.feat3": "享有一年內免費維護與 Bug 修復（若未來 OS 大型改版需重構，新版另行販售）",
         "price.feat4": "純淨無廣告、本機離線運作、零個人資料上傳",
-        "price.btn_shopee": "台灣蝦皮官方賣場購買 (即時發號)",
-        "price.sub": "支援超商繳費、ATM轉帳、信用卡分期｜下單後系統自動即時發送授權序號",
+        "price.btn_shopee": "官方正版序號購買 (NT$ 399)",
+        "price.sub": "支援多元支付管道｜完成購買後系統即時發送授權序號",
 
         "faq.title": "常見問答",
         "faq.desc": "關於 KyteShelf 的授權、功能與相容性說明。",
@@ -104,9 +104,9 @@ const TRANSLATIONS = {
         "faq.q2": "Q：防毒軟體或 Windows Defender 會警示嗎？",
         "faq.a2": "由於本軟體使用 Windows 原生滑鼠勾點（Global Mouse Hook）來偵測「按住晃動召喚」手勢，少數防毒軟體可能初次會跳出安全提示。KyteShelf 採用純粹本機離線架構，不含任何聯網竊取程式碼，請安心點擊「允許執行」。",
         "faq.q3": "Q：更換新電腦或系統重灌後序號還能用嗎？",
-        "faq.a3": "可以！每組正版序號允許同時綁定 2 台裝置。若您重灌電腦或更換硬體配備，可透過蝦皮聊聊或官方客服信箱 (<a href='mailto:support@aisming.com' class='text-blue-600 hover:underline font-semibold'>support@aisming.com</a>) 聯繫，將免費為您重置授權額度。",
+        "faq.a3": "可以！每組正版序號允許同時綁定 2 台裝置。若您重灌電腦或更換硬體配備，可透過官方客服信箱 (<a href='mailto:support@aisming.com' class='text-blue-600 hover:underline font-semibold'>support@aisming.com</a>) 聯繫，將免費為您重置授權額度。",
         "faq.q4": "Q：購買後如何取得序號與開通？",
-        "faq.a4": "在蝦皮官方賣場下單結帳後，自動發號系統會在 1 分鐘內透過聊聊私訊發送專屬正式版序號與軟體安裝引導，輸入後即可立即解鎖完整功能。",
+        "faq.a4": "完成購買後，系統會在 1 分鐘內透過電子郵件發送專屬正式版序號與軟體安裝引導，輸入後即可立即解鎖完整功能。",
         "faq.q5": "Q：一次性買斷的維護期與後續更新政策是什麼？",
         "faq.a5": "本商品為一次性買斷，享有一年內免費維護與 Bug 修復。若未來作業系統大型改版（如 Windows 升級）導致軟體需重構，新版本將另行販售。",
 
@@ -211,7 +211,7 @@ const TRANSLATIONS = {
         "price.feat2": "Single license key supports concurrent activation on 2 personal Windows devices",
         "price.feat3": "Includes 1 year of free maintenance & bug fixes (major OS rewrites sold separately)",
         "price.feat4": "Zero ads, 100% local offline processing, zero cloud telemetry",
-        "price.btn_shopee": "Official Shopee Store Purchase (Instant Key Delivery)",
+        "price.btn_shopee": "Purchase Official License (NT$ 399)",
         "price.sub": "Automated instant digital delivery upon checkout",
 
         "faq.title": "Frequently Asked Questions",

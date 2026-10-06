@@ -118,6 +118,8 @@ class ShelfManager(QObject):
         self.tray_icon.show()
 
     def rebuild_tray_menu(self):
+        if not hasattr(self, "tray_icon") or self.tray_icon is None:
+            return
         self.tray_icon.setToolTip(t("tray.tip"))
         self.tray_menu = QMenu()
         self.tray_menu.setStyleSheet("""

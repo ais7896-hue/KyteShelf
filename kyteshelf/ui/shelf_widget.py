@@ -222,6 +222,7 @@ class KyteShelfWidget(QWidget):
         self.suppress_auto_hide = False
 
         self.init_ui()
+        self.update_state()
 
     def _apply_container_style(self, is_drag_hover=False):
         if is_drag_hover:

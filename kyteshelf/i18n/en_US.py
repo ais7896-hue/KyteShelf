@@ -228,7 +228,7 @@ TRANSLATIONS = {
     "license.btn_deactivate": "🔄 Deactivate This PC (Transfer License)",
     "license.hw_title": "Hardware ID:",
     "license.btn_copy_hw": "Copy Full Hardware ID",
-    "license.btn_buy_shopee": "🛒 Buy License Key on Official Store (NT$ 399)",
+    "license.btn_buy_shopee": "🛒 Buy License Key on Official Website (NT$ 399)",
     "license.support_footer": "Technical Support & Inquiries:",
     "license.empty_key_warn": "Please enter a license key first",
     "license.connecting": "Connecting to license server...",

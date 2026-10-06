@@ -10,7 +10,7 @@ from ..i18n import t
 
 
 class LicenseDialog(QDialog):
-    SHOPEE_URL = "https://shopee.tw"  # 可替換為使用者的實際蝦皮賣場網址
+    BUY_URL = "https://ais7896-hue.github.io/KyteShelf/#pricing"  # 官方購買方案頁面
     license_updated = Signal()
 
     def __init__(self, license_manager: LicenseManager = None, parent=None):
@@ -234,7 +234,7 @@ class LicenseDialog(QDialog):
                 color: #C2410C;
             }
         """)
-        self.btn_buy.clicked.connect(lambda: webbrowser.open(self.SHOPEE_URL))
+        self.btn_buy.clicked.connect(lambda: webbrowser.open(self.BUY_URL))
         footer_layout.addWidget(self.btn_buy)
 
         footer_layout.addStretch()
