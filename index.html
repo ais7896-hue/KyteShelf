@@ -115,6 +115,8 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Lemon Squeezy 浮窗結帳腳本 -->
+    <script src="https://assets.lemonsqueezy.com/lemon.js" defer></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
 
@@ -583,10 +585,15 @@
 
                 <!-- 購買管道 -->
                 <div class="space-y-3">
-                    <a href="mailto:support@aisming.com?subject=KyteShelf%20%E6%AD%A3%E7%89%88%E5%BA%8F%E8%99%9F%E8%B3%BC%E8%B2%B7%E8%AB%AE%E8%A9%A2"
-                        class="block w-full py-4 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black rounded-xl shadow-lg transition text-center flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-envelope text-base"></i>
+                    <a href="https://kytesuite.lemonsqueezy.com/checkout/buy/461f3030-b622-4ef5-a1f6-f2e73a9968b1?embed=1&checkout[custom][product_type]=kyteshelf"
+                        class="lemonsqueezy-button block w-full py-4 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black rounded-xl shadow-lg transition text-center flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-bolt text-base"></i>
                         <span data-i18n="price.btn_shopee">官方正版序號購買 (NT$ 399)</span>
+                    </a>
+                    <a href="https://kytesuite.lemonsqueezy.com/checkout/buy/e2f15337-72b7-438e-8cc4-0dcbdb236816?embed=1&checkout[custom][product_type]=bundle"
+                        class="lemonsqueezy-button block w-full py-2.5 px-4 rounded-xl bg-slate-700/80 hover:bg-slate-600/80 border border-sky-400/30 text-sky-300 hover:text-white text-xs font-bold text-center transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-layer-group"></i>
+                        <span data-i18n="price.bundle_btn">選購 Kyte Suite 旗艦三合一套裝 (All-in-One)</span>
                     </a>
                     <div data-i18n="price.sub" class="text-[11px] text-slate-400 text-center leading-relaxed">
                         支援多元支付管道｜完成購買後系統即時發送授權序號

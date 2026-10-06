@@ -95,6 +95,7 @@ const TRANSLATIONS = {
         "price.feat3": "享有一年內免費維護與 Bug 修復（若未來 OS 大型改版需重構，新版另行販售）",
         "price.feat4": "純淨無廣告、本機離線運作、零個人資料上傳",
         "price.btn_shopee": "官方正版序號購買 (NT$ 399)",
+        "price.bundle_btn": "選購 Kyte Suite 旗艦三合一套裝 (All-in-One)",
         "price.sub": "支援多元支付管道｜完成購買後系統即時發送授權序號",
 
         "faq.title": "常見問答",
@@ -212,6 +213,7 @@ const TRANSLATIONS = {
         "price.feat3": "Includes 1 year of free maintenance & bug fixes (major OS rewrites sold separately)",
         "price.feat4": "Zero ads, 100% local offline processing, zero cloud telemetry",
         "price.btn_shopee": "Purchase Official License (NT$ 399)",
+        "price.bundle_btn": "Get Kyte Suite Trio (All-in-One Bundle)",
         "price.sub": "Automated instant digital delivery upon checkout",
 
         "faq.title": "Frequently Asked Questions",
