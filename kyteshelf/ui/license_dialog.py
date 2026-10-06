@@ -10,7 +10,7 @@ from ..i18n import t
 
 
 class LicenseDialog(QDialog):
-    BUY_URL = "https://ais7896-hue.github.io/KyteShelf/#pricing"  # 官方購買方案頁面
+    BUY_URL = "https://kyteshelf.aisming.com/#pricing"  # 官方購買方案頁面
     license_updated = Signal()
 
     def __init__(self, license_manager: LicenseManager = None, parent=None):
