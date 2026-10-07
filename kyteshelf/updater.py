@@ -256,7 +256,7 @@ class UpdateDialog(QDialog):
 
     def _start_download(self):
         if not self.download_url:
-            QMessageBox.warning(self, "錯誤", t("update.err_no_url"))
+            QMessageBox.warning(self, t("update.error_title", default="錯誤"), t("update.err_no_url"))
             return
 
         self.btn_update.setEnabled(False)
@@ -292,4 +292,4 @@ class UpdateDialog(QDialog):
             QApplication.quit()
             sys.exit(0)
         except Exception as e:
-            QMessageBox.critical(self, "啟動失敗", t("update.err_launch", err=str(e)))
+            QMessageBox.critical(self, t("update.launch_failed_title", default="啟動失敗"), t("update.err_launch", err=str(e)))

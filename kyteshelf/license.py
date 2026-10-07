@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Tuple, Optional
 from PySide6.QtCore import QObject, Signal
 
+from .i18n import t
+
 # 預設簽名密鑰 (需與 Cloudflare Worker 的 JWT_SECRET 相同)
 DEFAULT_JWT_SECRET = "KyteShelf_Secret_2026_@KeySecure"
 
@@ -208,11 +210,7 @@ class LicenseManager(QObject):
         if self.is_unlimited():
             return True, ""
         if current_visible_count >= FREE_MAX_SHELVES:
-            return False, (
-                f"【基礎免費版限制】\n\n"
-                f"您的 14 天全功能試用已結束，免費版最多同時使用 {FREE_MAX_SHELVES} 個置物架。\n"
-                f"升級為 Pro 專業版（買斷制 NT$ 399）即可解鎖無限置物架！"
-            )
+            return False, t("license.limit_shelves_msg", max_count=FREE_MAX_SHELVES)
         return True, ""
 
     def can_add_files(self, current_file_count: int, incoming_count: int) -> Tuple[int, str]:
@@ -227,11 +225,10 @@ class LicenseManager(QObject):
         allowed_count = min(incoming_count, remaining_slots)
         
         if allowed_count < incoming_count:
-            msg = (
-                f"【基礎免費版限制】\n\n"
-                f"您的 14 天全功能試用已結束，免費版單一置物架上限為 {FREE_MAX_FILES_PER_SHELF} 個檔案。\n"
-                f"本次僅為您收納前 {allowed_count} 個項目。\n"
-                f"升級為 Pro 專業版即可解鎖無限檔案收納容量！"
+            msg = t(
+                "license.limit_files_msg",
+                max_count=FREE_MAX_FILES_PER_SHELF,
+                allowed_count=allowed_count,
             )
             return allowed_count, msg
         return allowed_count, ""
@@ -240,21 +237,13 @@ class LicenseManager(QObject):
         """判定是否可使用一鍵打包 ZIP"""
         if self.is_unlimited():
             return True, ""
-        return False, (
-            "【Pro 專業版專屬功能】\n\n"
-            "「一鍵打包壓縮為 ZIP」屬於 Pro 專業版功能。\n"
-            "升級 Pro 即可永久享用完整生產力工具鏈！"
-        )
+        return False, t("license.pro_feature_zip_msg")
 
     def can_use_folder_watch(self) -> Tuple[bool, str]:
         """判定是否可使用資料夾監控"""
         if self.is_unlimited():
             return True, ""
-        return False, (
-            "【Pro 專業版專屬功能】\n\n"
-            "「資料夾即時監控自動入架」屬於 Pro 專業版功能。\n"
-            "升級 Pro 即可解鎖全自動監控流程！"
-        )
+        return False, t("license.pro_feature_watch_msg")
 
     def get_license_info(self) -> dict:
         return {
@@ -310,7 +299,7 @@ class LicenseManager(QObject):
         """連線至 Cloudflare Worker 啟用序號"""
         clean_key = key.strip().upper()
         if not clean_key:
-            return False, "請輸入授權序號"
+            return False, t("license.empty_key_err")
 
         api_url = f"{self.get_api_base_url()}/api/activate"
         payload = {
@@ -326,7 +315,7 @@ class LicenseManager(QObject):
                 data=req_data,
                 headers={
                     "Content-Type": "application/json; charset=utf-8",
-                    "User-Agent": "KyteShelf-Client/1.4.1 (Windows NT 10.0; Win64; x64)"
+                    "User-Agent": "KyteShelf-Client/1.4.2 (Windows NT 10.0; Win64; x64)"
                 },
                 method="POST"
             )
@@ -351,9 +340,9 @@ class LicenseManager(QObject):
                     self._is_pro = True
                     self._license_data = save_data
                     self.license_changed.emit(True)
-                    return True, "🎉 授權成功！已為此電腦開通 KyteShelf 專業版。"
+                    return True, t("license.activate_success")
                 else:
-                    return False, res_json.get("message", "啟用失敗")
+                    return False, res_json.get("message", t("license.activate_failed"))
 
         except urllib.error.HTTPError as e:
             try:
@@ -363,7 +352,7 @@ class LicenseManager(QObject):
             except Exception:
                 return False, f"伺服器回應錯誤: {e.code}"
         except urllib.error.URLError as e:
-            return False, f"網路連線失敗，請檢查網際網路連線: {e.reason}"
+            return False, t("license.net_err", err=str(e.reason))
         except Exception as e:
             return False, f"啟用異常: {str(e)}"
 
@@ -371,7 +360,7 @@ class LicenseManager(QObject):
         """解除當前設備綁定（更換電腦時使用）"""
         current_key = self._license_data.get("key")
         if not current_key:
-            return False, "尚未綁定任何序號"
+            return False, t("license.empty_key_err")
 
         api_url = f"{self.get_api_base_url()}/api/deactivate"
         payload = {
@@ -386,7 +375,7 @@ class LicenseManager(QObject):
                 data=req_data,
                 headers={
                     "Content-Type": "application/json; charset=utf-8",
-                    "User-Agent": "KyteShelf-Client/1.4.1 (Windows NT 10.0; Win64; x64)"
+                    "User-Agent": "KyteShelf-Client/1.4.2 (Windows NT 10.0; Win64; x64)"
                 },
                 method="POST"
             )
@@ -405,7 +394,7 @@ class LicenseManager(QObject):
                 self._is_pro = False
                 self._license_data = {}
                 self.license_changed.emit(False)
-                return True, "已成功解除此電腦綁定，名額已釋放！"
+                return True, t("license.deactivate_success")
 
         except Exception as e:
             # 即使連線有問題，亦允許使用者清除本機快取

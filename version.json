@@ -1,9 +1,9 @@
 {
   "app_name": "KyteShelf",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "release_date": "2026-10-07",
   "min_supported_version": "1.0.0",
   "mandatory": false,
-  "notes": "1. [新功能] 內建自動版本檢測與一鍵無縫下載升級\n2. [優化] 系統托盤選單新增「檢查版本更新...」功能\n3. [修復] 強化置物架視窗重啟記憶與多語言即時切換穩定度",
-  "download_url": "https://github.com/ais7896-hue/KyteShelf/releases/download/v1.4.1/KyteShelf_Setup_v1.4.1.exe"
+  "notes": "1. [新功能] 新增單一實例防多開 IPC 機制，重複啟動自動喚醒置物架\n2. [修復] 英文模式下授權功能限制彈窗與更新選單語系在地化支援\n3. [優化] 強化工作階段與視窗置頂互動體驗",
+  "download_url": "https://github.com/ais7896-hue/KyteShelf/releases/download/v1.4.2/KyteShelf_Setup_v1.4.2.exe"
 }

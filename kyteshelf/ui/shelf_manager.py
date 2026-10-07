@@ -20,7 +20,7 @@ from .shelf_widget import KyteShelfWidget, DropShelfWidget
 
 
 class ShelfManager(QObject):
-    APP_VERSION = "1.4.1"
+    APP_VERSION = "1.4.2"
     REPO_NAME = "ais7896-hue/KyteShelf"
     CNAME_DOMAIN = "kyteshelf.aisming.com"
     def __init__(self, config_manager: ConfigManager = None):
@@ -328,10 +328,14 @@ class ShelfManager(QObject):
         
     def show_all(self):
         offset = 0
+        shown_any = False
         for shelf in self.shelves:
-            if len(shelf.file_paths) > 0 or shelf.is_pinned:
+            if len(shelf.file_paths) > 0 or shelf.is_pinned or shelf.isVisible():
                 shelf.popup_at(QCursor.pos().x() + offset, QCursor.pos().y() + offset)
                 offset += 40
+                shown_any = True
+        if not shown_any and self.shelves:
+            self.shelves[0].popup_at(QCursor.pos().x(), QCursor.pos().y())
             
     def on_shake(self, x, y):
         target_shelf = None

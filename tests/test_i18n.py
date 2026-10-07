@@ -72,6 +72,15 @@ class TestI18n(unittest.TestCase):
             lang = detect_system_language()
             self.assertEqual(lang, "en_US")
 
+    def test_tray_and_license_translations(self):
+        self.i18n.apply_language("en_US")
+        self.assertEqual(t("tray.check_update"), "Check for Updates...")
+        self.assertIn("Free Edition Limit", t("license.limit_shelves_msg", max_count=1))
+        
+        self.i18n.apply_language("zh_TW")
+        self.assertEqual(t("tray.check_update"), "檢查版本更新...")
+        self.assertIn("基礎免費版限制", t("license.limit_shelves_msg", max_count=1))
+
 
 if __name__ == "__main__":
     unittest.main()
