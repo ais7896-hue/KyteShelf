@@ -1,10 +1,11 @@
 import os
+import time
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QFileSystemWatcher
+from PySide6.QtCore import QObject, QFileSystemWatcher, QTimer
 from PySide6.QtGui import QIcon, QCursor
 from PySide6.QtWidgets import (
-    QApplication, QMenu, QFileDialog, QSystemTrayIcon, QStyle
+    QApplication, QMenu, QFileDialog, QSystemTrayIcon, QStyle, QMessageBox
 )
 
 from ..config import ConfigManager
@@ -12,12 +13,16 @@ from ..license import LicenseManager
 from ..session import SessionManager
 from ..utils import get_resource_path
 from ..i18n import t, i18n
+from ..updater import CheckUpdateWorker, UpdateDialog
 from .hotkey_dialog import SettingsDialog
 from .license_dialog import LicenseDialog
 from .shelf_widget import KyteShelfWidget, DropShelfWidget
 
 
 class ShelfManager(QObject):
+    APP_VERSION = "1.4.1"
+    REPO_NAME = "ais7896-hue/KyteShelf"
+    CNAME_DOMAIN = "kyteshelf.aisming.com"
     def __init__(self, config_manager: ConfigManager = None):
         super().__init__()
         self.config_manager = config_manager or ConfigManager()
@@ -41,6 +46,11 @@ class ShelfManager(QObject):
         self.session_manager = SessionManager(config_manager=self.config_manager)
         self.init_tray()
         self.restore_session()
+
+        # 啟動 3 秒後靜默檢查更新 (不影響啟動速度)
+        self.updater_worker = None
+        self._is_silent_check = True
+        QTimer.singleShot(3000, lambda: self.check_for_updates(silent=True))
 
     def on_language_changed(self, lang):
         """當語言切換時重建托盤選單並通知所有置物架重譯介面"""
@@ -156,6 +166,9 @@ class ShelfManager(QObject):
         self.act_license = self.tray_menu.addAction(t("tray.license_mgr"))
         self.act_license.triggered.connect(self.open_license_dialog)
         self.update_tray_license_status()
+
+        act_update = self.tray_menu.addAction(t("tray.check_update", default="檢查版本更新..."))
+        act_update.triggered.connect(lambda: self.check_for_updates(silent=False))
         self.tray_menu.addSeparator()
         
         act_watch = self.tray_menu.addAction(t("tray.watch_folder"))
@@ -414,3 +427,60 @@ class ShelfManager(QObject):
                 
             cursor_pos = QCursor.pos()
             target_shelf.popup_at(cursor_pos.x(), cursor_pos.y())
+
+    def check_for_updates(self, silent: bool = True):
+        """檢查版本更新 (silent=True 為背景自動檢查；silent=False 為使用者手動點擊)"""
+        last_check = float(self.config_manager.get("last_update_check_time", 0.0) or 0.0)
+        # 背景靜默檢查且 24 小時內已檢查過則略過
+        if silent and (time.time() - last_check < 86400):
+            return
+
+        self._is_silent_check = silent
+        self.config_manager.save_config({"last_update_check_time": time.time()})
+
+        # 避免重複觸發
+        if self.updater_worker and self.updater_worker.isRunning():
+            return
+
+        self.updater_worker = CheckUpdateWorker(
+            current_ver=self.APP_VERSION,
+            repo=self.REPO_NAME,
+            cname_domain=self.CNAME_DOMAIN,
+            parent=self
+        )
+        self.updater_worker.checked.connect(self._on_update_result)
+        self.updater_worker.error.connect(self._on_update_error)
+        self.updater_worker.start()
+
+    def _on_update_result(self, has_update: bool, latest_ver: str, notes: str, download_url: str):
+        if has_update:
+            skipped_ver = self.config_manager.get("skipped_version", "")
+            # 若為靜默檢查且使用者曾選擇「略過此版本」則不打擾
+            if self._is_silent_check and skipped_ver == latest_ver:
+                return
+
+            dlg = UpdateDialog(
+                app_name="KyteShelf",
+                current_ver=self.APP_VERSION,
+                new_ver=latest_ver,
+                notes=notes,
+                download_url=download_url,
+                on_skip_cb=lambda v: self.config_manager.save_config({"skipped_version": v}),
+                parent=None
+            )
+            dlg.exec()
+        elif not self._is_silent_check:
+            QMessageBox.information(
+                None, 
+                t("update.latest_title", default="檢查更新"), 
+                t("update.latest_msg", ver=self.APP_VERSION, default=f"目前已是最新版本 (v{self.APP_VERSION})！")
+            )
+
+    def _on_update_error(self, err: str):
+        if not self._is_silent_check:
+            QMessageBox.warning(
+                None, 
+                t("update.latest_title", default="檢查更新"), 
+                t("update.err_conn", err=err, default=f"連線至伺服器時發生錯誤：\n{err}")
+            )
+

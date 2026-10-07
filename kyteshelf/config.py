@@ -14,7 +14,9 @@ class ConfigManager(QObject):
         "hotkey": "<ctrl>+`",
         "hotkey_display": "Ctrl + `",
         "theme_color": "#0284C7",
-        "language": "system"
+        "language": "system",
+        "last_update_check_time": 0.0,
+        "skipped_version": ""
     }
 
     def __init__(self):
@@ -81,3 +83,7 @@ class ConfigManager(QObject):
         except Exception as e:
             print(f"儲存設定檔失敗: {e}")
         self.config_changed.emit(self.config)
+
+    def get(self, key, default=None):
+        return self.config.get(key, default)
+
