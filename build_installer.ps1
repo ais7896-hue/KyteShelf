@@ -1,3 +1,7 @@
+param(
+    [switch]$SkipTests
+)
+
 # build_installer.ps1
 # KyteShelf 一鍵打包與安裝程式編譯腳本 (含 Portable 綠色版)
 
@@ -24,6 +28,17 @@ if (Test-Path $venvPy) {
         & $venvPy -m pip install --upgrade pyinstaller
     }
     $pyinstallerCmd = $venvPyInstaller
+}
+
+# 0.5 自動化測試驗證 (Fail-fast)
+if (-not $SkipTests) {
+    Write-Host "`n>>> [0.5/3] 正在執行自動化測試防禦驗證 (Fail-Fast)... " -ForegroundColor Cyan
+    & $pyCmd run_tests.py
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "`n[ERROR] 單元測試未通過！為確保發行品質已中止封裝。" -ForegroundColor Red
+        Write-Host "提示：若緊急需要略過測試打包，可附加參數: .\build_installer.ps1 -SkipTests" -ForegroundColor Yellow
+        exit 1
+    }
 }
 
 # 1. 清理過往建置產物
