@@ -71,6 +71,33 @@ def run_all_tests():
     print(f"  執行耗時 (Elapsed) : {elapsed:.3f} 秒")
     print(f"{BOLD}------------------------------------------------------{RESET}\n")
 
+    # 如果有失敗或錯誤，印出詳細原因
+    if failures > 0 or errors > 0:
+        print(f"\n{RED}{BOLD}=== 失敗項目詳細清單 (Failures & Errors) ==={RESET}")
+        for test, tb in result.failures:
+            print(f"\n{RED}[FAILURE] {test}:{RESET}\n{tb}")
+        for test, tb in result.errors:
+            print(f"\n{RED}[ERROR] {test}:{RESET}\n{tb}")
+
+    # 如果在 GitHub Actions CI 環境中，將結果寫入 GITHUB_STEP_SUMMARY
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_path:
+        try:
+            with open(summary_path, "a", encoding="utf-8") as f:
+                f.write(f"## 🧪 KyteShelf Automated Test Results\n\n")
+                f.write(f"- **Total Tests**: {total}\n")
+                f.write(f"- **Passed**: {passed} ✅\n")
+                f.write(f"- **Failures**: {failures} ❌\n")
+                f.write(f"- **Errors**: {errors} ⚠️\n")
+                f.write(f"- **Duration**: {elapsed:.2f}s\n\n")
+                if failures > 0 or errors > 0:
+                    f.write("### ❌ Failure Details\n\n```\n")
+                    for test, tb in result.failures + result.errors:
+                        f.write(f"{test}\n{tb}\n---\n")
+                    f.write("```\n")
+        except Exception as e:
+            print(f"Failed to write GITHUB_STEP_SUMMARY: {e}")
+
     if not result.wasSuccessful():
         print(f"{RED}{BOLD}[FAIL] 自動測試未通過，請修復上述錯誤！{RESET}\n")
         return 1
