@@ -26,6 +26,7 @@ jobs:
 
       - name: Run Automated Test Suite
         env:
+          PYTHONIOENCODING: utf-8
           QT_QPA_PLATFORM: offscreen
         run: |
           python run_tests.py
