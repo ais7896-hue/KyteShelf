@@ -25,7 +25,12 @@ ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from tests.test_helpers import get_qapp
+# 預先初始化 Headless QApplication，防止模組各自初始化時找不到 display plugin
+try:
+    from PySide6.QtWidgets import QApplication
+    _app = QApplication.instance() or QApplication(["-platform", "offscreen"])
+except Exception as e:
+    print(f"Warning: Failed to pre-init offscreen QApplication: {e}")
 
 # ANSI 顏色定義
 GREEN = "\033[92m"
@@ -36,9 +41,6 @@ BOLD = "\033[1m"
 RESET = "\033[0m"
 
 def run_all_tests():
-    # 初始化 Headless QApplication
-    get_qapp()
-
     print(f"\n{CYAN}{BOLD}======================================================{RESET}")
     print(f"{CYAN}{BOLD}        KyteShelf Automated Test Suite Runner         {RESET}")
     print(f"{CYAN}{BOLD}======================================================{RESET}\n")
@@ -71,13 +73,17 @@ def run_all_tests():
     print(f"  執行耗時 (Elapsed) : {elapsed:.3f} 秒")
     print(f"{BOLD}------------------------------------------------------{RESET}\n")
 
-    # 如果有失敗或錯誤，印出詳細原因
+    # 如果有失敗或錯誤，透過 GitHub Actions Workflow Command 直接印出 annotation
     if failures > 0 or errors > 0:
         print(f"\n{RED}{BOLD}=== 失敗項目詳細清單 (Failures & Errors) ==={RESET}")
         for test, tb in result.failures:
-            print(f"\n{RED}[FAILURE] {test}:{RESET}\n{tb}")
+            last_line = tb.strip().splitlines()[-1] if tb.strip() else "AssertionError"
+            print(f"::error title={test}::{last_line}")
+            print(f"\n[FAILURE] {test}:\n{tb}")
         for test, tb in result.errors:
-            print(f"\n{RED}[ERROR] {test}:{RESET}\n{tb}")
+            last_line = tb.strip().splitlines()[-1] if tb.strip() else "Exception"
+            print(f"::error title={test}::{last_line}")
+            print(f"\n[ERROR] {test}:\n{tb}")
 
     # 如果在 GitHub Actions CI 環境中，將結果寫入 GITHUB_STEP_SUMMARY
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
