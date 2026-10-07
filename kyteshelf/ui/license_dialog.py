@@ -18,11 +18,32 @@ class LicenseDialog(QDialog):
         self.license_manager = license_manager or LicenseManager.get_instance()
         self.setWindowTitle(t("license.dialog_title"))
         self.setFixedSize(500, 555)
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setWindowFlags(
+            Qt.WindowType.Dialog
+            | Qt.WindowType.WindowTitleHint
+            | Qt.WindowType.WindowCloseButtonHint
+            | Qt.WindowType.WindowSystemMenuHint
+        )
+        self.setAttribute(Qt.WA_DeleteOnClose)
 
         self.license_manager.license_changed.connect(self.refresh_ui_state)
         self.init_ui()
         self.refresh_ui_state()
+
+    def reject(self):
+        """覆寫 QDialog.reject()，確保點擊 X 或按 ESC 順利關閉視窗"""
+        super().reject()
+        self.close()
+
+    def closeEvent(self, event):
+        event.accept()
+        super().closeEvent(event)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape:
+            self.reject()
+            return
+        super().keyPressEvent(event)
 
     def init_ui(self):
         self.setStyleSheet("""
@@ -299,7 +320,7 @@ class LicenseDialog(QDialog):
             self.status_badge.setText(t("license.status_pro_badge"))
             self.status_badge.setStyleSheet("font-size: 14px; font-weight: bold; color: #15803D;")
             
-            masked = info.get("masked_key", "KYTE-****-****-****")
+            masked = info.get("masked_key", "KS-****-****-****")
             self.status_desc.setText(t("license.status_pro_desc", key=masked))
 
             self.input_card.setVisible(False)

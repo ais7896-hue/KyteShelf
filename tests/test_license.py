@@ -189,7 +189,7 @@ class TestLicenseManager(unittest.TestCase):
 
         # Build valid token for this machine
         payload = {
-            "key": "KYTE-TEST-1234-ABCD",
+            "key": "KS-TEST-1234-ABCD",
             "machine_id": manager.machine_id,
             "created_at": time.time()
         }
@@ -204,12 +204,12 @@ class TestLicenseManager(unittest.TestCase):
         # Test _verify_token directly
         decoded_payload, is_valid = manager._verify_token(valid_token)
         self.assertTrue(is_valid)
-        self.assertEqual(decoded_payload["key"], "KYTE-TEST-1234-ABCD")
+        self.assertEqual(decoded_payload["key"], "KS-TEST-1234-ABCD")
 
         # Save to license file
         with open(self.license_file, "w", encoding="utf-8") as f:
             json.dump({
-                "key": "KYTE-TEST-1234-ABCD",
+                "key": "KS-TEST-1234-ABCD",
                 "token": valid_token,
                 "activated_at": "TestPC"
             }, f)
@@ -239,7 +239,7 @@ class TestLicenseManager(unittest.TestCase):
         signal_events = []
         manager.license_changed.connect(signal_events.append)
 
-        success, msg = manager.activate_online("KYTE-TEST-KEY-0001")
+        success, msg = manager.activate_online("KS-TEST-KEY-0001")
         self.assertTrue(success)
         self.assertIn("授權成功", msg)
         self.assertTrue(manager.is_activated())
