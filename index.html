@@ -585,18 +585,36 @@
 
                 <!-- 購買管道 -->
                 <div class="space-y-3">
+                    <!-- 綠界科技按鈕 (單品) -->
+                    <button type="button" class="btn-trigger-ecpay w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white font-black rounded-xl shadow-lg shadow-emerald-950/40 transition text-center flex items-center justify-center gap-2.5 cursor-pointer border border-emerald-400/30"
+                        data-product="kyteshelf" data-name="KyteShelf 旗艦版終身授權" data-price="399">
+                        <i class="fa-solid fa-shield-halved text-emerald-200 text-lg"></i>
+                        <span data-i18n="price.btn_ecpay">綠界科技安全結帳 (信用卡 / ATM / 超商)</span>
+                    </button>
+
+                    <!-- 綠界科技三合一套裝按鈕 -->
+                    <button type="button" class="btn-trigger-ecpay w-full py-3 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 active:scale-95 text-white font-bold rounded-xl shadow-md transition text-center flex items-center justify-center gap-2 cursor-pointer border border-indigo-400/30 text-xs sm:text-sm"
+                        data-product="bundle" data-name="Kyte Suite 旗艦三合一套裝 (All-in-One)" data-price="699">
+                        <i class="fa-solid fa-layer-group text-amber-300"></i>
+                        <span>綠界選購 Kyte Suite 旗艦三合一套裝 (NT$ 699)</span>
+                    </button>
+
+                    <!-- Lemon Squeezy 國際按鈕 (海外買家) -->
                     <a href="https://kytesuite.lemonsqueezy.com/checkout/buy/461f3030-b622-4ef5-a1f6-f2e73a9968b1?embed=1&checkout[custom][product_type]=kyteshelf"
-                        class="lemonsqueezy-button block w-full py-4 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black rounded-xl shadow-lg transition text-center flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-bolt text-base"></i>
-                        <span data-i18n="price.btn_shopee">官方正版序號購買 (NT$ 399)</span>
+                        class="lemonsqueezy-button block w-full py-2.5 bg-slate-700/80 hover:bg-slate-600 active:scale-95 text-slate-200 hover:text-white font-bold rounded-xl border border-slate-600 transition text-center flex items-center justify-center gap-2 text-xs">
+                        <i class="fa-solid fa-globe text-sky-400"></i>
+                        <span data-i18n="price.btn_lemon">海外信用卡 / PayPal 購買 (Lemon Squeezy)</span>
                     </a>
+
+                    <!-- 套裝方案 (海外 Lemon Squeezy) -->
                     <a href="https://kytesuite.lemonsqueezy.com/checkout/buy/e2f15337-72b7-438e-8cc4-0dcbdb236816?embed=1&checkout[custom][product_type]=bundle"
-                        class="lemonsqueezy-button block w-full py-2.5 px-4 rounded-xl bg-slate-700/80 hover:bg-slate-600/80 border border-sky-400/30 text-sky-300 hover:text-white text-xs font-bold text-center transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-layer-group"></i>
-                        <span data-i18n="price.bundle_btn">選購 Kyte Suite 旗艦三合一套裝 (All-in-One)</span>
+                        class="lemonsqueezy-button block w-full py-2 px-4 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-sky-400/30 text-sky-300 hover:text-white text-[11px] font-bold text-center transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-globe"></i>
+                        <span data-i18n="price.bundle_btn">海外選購 Kyte Suite 三合一套裝 (Lemon Squeezy)</span>
                     </a>
+
                     <div data-i18n="price.sub" class="text-[11px] text-slate-400 text-center leading-relaxed">
-                        支援多元支付管道｜完成購買後系統即時發送授權序號
+                        支援多元支付管道｜付款完成後系統自動派發正式授權序號至您的信箱
                     </div>
                 </div>
             </div>
@@ -673,8 +691,118 @@
         </div>
     </footer>
 
+    <!-- 綠界結帳彈窗 (ECPay Modal) -->
+    <div id="ecpay-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4 transition-opacity duration-300">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl relative text-left text-slate-200">
+            <!-- 關閉按鈕 -->
+            <button id="btn-close-ecpay-modal" type="button" class="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <!-- 標題與圖示 -->
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <h3 data-i18n="ecpay.modal_title" class="text-lg font-black text-white">綠界科技 ECPay 安全結帳</h3>
+                    <p data-i18n="ecpay.modal_subtitle" class="text-xs text-slate-400">支援台灣信用卡、ATM 虛擬帳號、超商代碼繳費</p>
+                </div>
+            </div>
+
+            <!-- 訂單明細摘要 -->
+            <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 mb-5">
+                <div class="flex items-center justify-between text-xs text-slate-400 mb-1.5">
+                    <span data-i18n="ecpay.item_label">購買項目</span>
+                    <span id="ecpay-modal-item-name" data-i18n="ecpay.item_name" class="font-bold text-slate-200">KyteShelf 旗艦版終身授權</span>
+                </div>
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span data-i18n="ecpay.price_label">結帳金額</span>
+                    <span id="ecpay-modal-item-price" class="text-lg font-black text-emerald-400">NT$ 399</span>
+                </div>
+            </div>
+
+            <!-- 結帳表單 (送往 Cloudflare Worker API) -->
+            <form id="ecpay-form-trigger" method="POST" action="https://kyteshelf-license.ais7896.workers.dev/api/ecpay/checkout" class="space-y-4">
+                <input type="hidden" id="ecpay-modal-product-input" name="product" value="kyteshelf">
+                <div>
+                    <label for="ecpay-buyer-email" class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+                        <span data-i18n="ecpay.email_label">接收授權序號的 Email 信箱</span>
+                        <span class="text-[10px] text-emerald-400 font-semibold">*必填</span>
+                    </label>
+                    <div class="relative">
+                        <i class="fa-solid fa-envelope absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                        <input type="email" id="ecpay-buyer-email" name="email" required placeholder="例如：yourname@gmail.com"
+                            class="w-full pl-9 pr-4 py-3 bg-slate-800/90 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition">
+                    </div>
+                    <p data-i18n="ecpay.email_hint" class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                        付款完成後，系統將會在 1 分鐘內將您的正式版序號與安裝教學寄至此信箱。
+                    </p>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" id="btn-submit-ecpay"
+                        class="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white font-black rounded-xl shadow-lg shadow-emerald-950/50 transition flex items-center justify-center gap-2 cursor-pointer">
+                        <span data-i18n="ecpay.btn_proceed">前往綠界安全付款</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-center gap-4 text-[10px] text-slate-500 pt-1">
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-lock text-emerald-400"></i> 256-bit SSL 加密</span>
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-bolt text-amber-400"></i> 即時自動發號</span>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- i18n 多國語言支援腳本 -->
     <script src="assets/i18n.js"></script>
+    <script>
+        // 綠界 ECPay 結帳彈窗互動控制 (支援單品與三合一套裝)
+        const ecpayModal = document.getElementById('ecpay-modal');
+        const closeEcpayBtn = document.getElementById('btn-close-ecpay-modal');
+        const ecpayProductInput = document.getElementById('ecpay-modal-product-input');
+        const ecpayNameEl = document.getElementById('ecpay-modal-item-name');
+        const ecpayPriceEl = document.getElementById('ecpay-modal-item-price');
+
+        document.querySelectorAll('.btn-trigger-ecpay').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const product = btn.dataset.product || 'kyteshelf';
+                const name = btn.dataset.name || 'KyteShelf 旗艦版終身授權';
+                const price = btn.dataset.price || '399';
+
+                if (ecpayProductInput) ecpayProductInput.value = product;
+                if (ecpayNameEl) ecpayNameEl.textContent = name;
+                if (ecpayPriceEl) ecpayPriceEl.textContent = 'NT$ ' + price;
+
+                if (ecpayModal) {
+                    ecpayModal.classList.remove('hidden');
+                    const emailInput = document.getElementById('ecpay-buyer-email');
+                    if (emailInput) setTimeout(() => emailInput.focus(), 100);
+                }
+            });
+        });
+
+        if (closeEcpayBtn && ecpayModal) {
+            closeEcpayBtn.addEventListener('click', () => {
+                ecpayModal.classList.add('hidden');
+            });
+        }
+
+        if (ecpayModal) {
+            ecpayModal.addEventListener('click', (e) => {
+                if (e.target === ecpayModal) {
+                    ecpayModal.classList.add('hidden');
+                }
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !ecpayModal.classList.contains('hidden')) {
+                    ecpayModal.classList.add('hidden');
+                }
+            });
+        }
+    </script>
 </body>
 
 </html>
