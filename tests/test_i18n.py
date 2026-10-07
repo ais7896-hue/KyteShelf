@@ -81,6 +81,11 @@ class TestI18n(unittest.TestCase):
         self.assertEqual(t("tray.check_update"), "檢查版本更新...")
         self.assertIn("基礎免費版限制", t("license.limit_shelves_msg", max_count=1))
 
+    def test_translate_with_key_keyword_arg(self):
+        # 測試 t() 傳入 key 關鍵字參數不會與函式本體參數衝突
+        text = t("license.status_pro_desc", key="KS-TEST-1234")
+        self.assertIn("KS-TEST-1234", text)
+
 
 if __name__ == "__main__":
     unittest.main()

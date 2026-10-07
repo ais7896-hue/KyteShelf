@@ -14,4 +14,4 @@ jobs:
         with:
           identifier: ais7896-hue.KyteShelf
           installers-regex: 'Setup.*\.exe$'
-          token: ${{ secrets.WINGET_PAT || secrets.WINGET_TOKEN }}
+          token: ${{ secrets.WINGET_PAT }}
