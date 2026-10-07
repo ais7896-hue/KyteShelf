@@ -16,6 +16,8 @@ class TestKyteShelfWidget(unittest.TestCase):
         get_qapp()
 
     def setUp(self):
+        self.orig_lang = i18n.current_language
+        i18n.apply_language("zh_TW")
         self.temp_dir = tempfile.TemporaryDirectory()
         self.user_dir = Path(self.temp_dir.name) / "user_docs"
         self.user_dir.mkdir(parents=True, exist_ok=True)
@@ -39,6 +41,7 @@ class TestKyteShelfWidget(unittest.TestCase):
         self.shelf.clear_files()
         self.shelf.close()
         self.temp_dir.cleanup()
+        i18n.apply_language(self.orig_lang)
 
     def test_initial_empty_state(self):
         self.assertEqual(len(self.shelf.file_paths), 0)
