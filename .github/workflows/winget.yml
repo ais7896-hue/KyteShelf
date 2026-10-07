@@ -1,0 +1,17 @@
+name: Publish to WinGet
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - name: Submit to WinGet
+        uses: vedantmgoyal9/winget-releaser@v2
+        with:
+          identifier: ais7896-hue.KyteShelf
+          installers-regex: 'Setup.*\.exe$'
+          token: ${{ secrets.WINGET_PAT || secrets.WINGET_TOKEN }}
