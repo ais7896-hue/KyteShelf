@@ -5,5 +5,6 @@
   "min_supported_version": "1.0.0",
   "mandatory": false,
   "notes": "1. [新功能] 新增單一實例防多開 IPC 機制，重複啟動自動喚醒置物架\n2. [修復] 英文模式下授權功能限制彈窗與更新選單語系在地化支援\n3. [優化] 強化工作階段與視窗置頂互動體驗",
+  "notes_en": "1. [New] Added single-instance IPC mechanism; relaunching activates the running shelf\n2. [Fix] Full localization for license limits and tray update menus in English mode\n3. [Optimize] Improved shelf session management and window layering experience",
   "download_url": "https://github.com/ais7896-hue/KyteShelf/releases/download/v1.4.2/KyteShelf_Setup_v1.4.2.exe"
 }

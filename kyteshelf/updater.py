@@ -19,29 +19,81 @@ from PySide6.QtWidgets import (
 )
 
 try:
-    from .i18n import t
+    from .i18n import t as _core_t, i18n
 except Exception:
-    def t(k, **kwargs):
-        fallback = {
-            "update.title": "發現新版本",
-            "update.found": "🎉 發現 {app_name} 新版本：v{new_ver}",
-            "update.current": "目前安裝版本：v{current_ver}",
-            "update.notes": "更新摘要：",
-            "update.btn_skip": "略過此版本",
-            "update.btn_later": "稍後提醒",
-            "update.btn_update": "立即下載並更新",
-            "update.downloading": "正在下載最新安裝包...",
-            "update.download_complete": "下載完成！即將啟動安裝精靈...",
-            "update.download_failed": "下載失敗",
-            "update.err_no_url": "未找到安裝程式下載位址，請至官網下載。",
-            "update.err_download": "無法下載安裝檔：\n{err}",
-            "update.err_launch": "無法啟動安裝程式：\n{err}",
-            "update.latest_title": "檢查更新",
-            "update.latest_msg": "目前已是最新版本 (v{ver})！",
-            "update.err_conn": "連線至伺服器時發生錯誤：\n{err}"
-        }
-        text = fallback.get(k, k)
-        return text.format(**kwargs) if kwargs else text
+    _core_t = None
+    i18n = None
+
+FALLBACK_TEXTS = {
+    "zh_TW": {
+        "update.title": "發現新版本",
+        "update.found": "🎉 發現 {app_name} 新版本：v{new_ver}",
+        "update.current": "目前安裝版本：v{current_ver}",
+        "update.notes": "更新摘要：",
+        "update.btn_skip": "略過此版本",
+        "update.btn_later": "稍後提醒",
+        "update.btn_update": "立即下載並更新",
+        "update.downloading": "正在下載最新安裝包...",
+        "update.download_complete": "下載完成！即將啟動安裝精靈...",
+        "update.download_failed": "下載失敗",
+        "update.err_no_url": "未找到安裝程式下載位址，請至官網下載。",
+        "update.err_download": "無法下載安裝檔：\n{err}",
+        "update.err_launch": "無法啟動安裝程式：\n{err}",
+        "update.latest_title": "檢查更新",
+        "update.latest_msg": "目前已是最新版本 (v{ver})！",
+        "update.err_conn": "連線至伺服器時發生錯誤：\n{err}",
+        "update.error_title": "錯誤",
+        "update.launch_failed_title": "啟動失敗",
+    },
+    "en_US": {
+        "update.title": "New Version Available",
+        "update.found": "🎉 New version available for {app_name}: v{new_ver}",
+        "update.current": "Current installed version: v{current_ver}",
+        "update.notes": "Release Notes:",
+        "update.btn_skip": "Skip This Version",
+        "update.btn_later": "Remind Me Later",
+        "update.btn_update": "Download & Update Now",
+        "update.downloading": "Downloading latest installer...",
+        "update.download_complete": "Download complete! Launching installer...",
+        "update.download_failed": "Download Failed",
+        "update.err_no_url": "Installer download URL not found. Please visit website to download.",
+        "update.err_download": "Unable to download installer:\n{err}",
+        "update.err_launch": "Unable to launch installer:\n{err}",
+        "update.latest_title": "Check for Updates",
+        "update.latest_msg": "You are already using the latest version (v{ver})!",
+        "update.err_conn": "Error connecting to server:\n{err}",
+        "update.error_title": "Error",
+        "update.launch_failed_title": "Launch Failed",
+    }
+}
+
+
+def t(k: str, default: Optional[str] = None, **kwargs) -> str:
+    lang = "zh_TW"
+    if i18n:
+        try:
+            lang = i18n.current_language
+        except Exception:
+            pass
+
+    res = None
+    if _core_t:
+        try:
+            res = _core_t(k, default=None, **kwargs)
+        except Exception:
+            res = None
+
+    if not res or res == k:
+        dict_for_lang = FALLBACK_TEXTS.get(lang, FALLBACK_TEXTS["en_US" if str(lang).startswith("en") else "zh_TW"])
+        res = dict_for_lang.get(k)
+        if res is None:
+            res = FALLBACK_TEXTS["zh_TW"].get(k, default or k)
+        if kwargs and isinstance(res, str):
+            try:
+                res = res.format(**kwargs)
+            except Exception:
+                pass
+    return res or default or k
 
 
 def parse_version(v: str) -> tuple:
@@ -67,6 +119,13 @@ class CheckUpdateWorker(QThread):
         notes = ""
         download_url = ""
 
+        is_en = False
+        if i18n:
+            try:
+                is_en = i18n.current_language.lower().startswith("en")
+            except Exception:
+                pass
+
         # 策略 1: 優先向官網/CDN 請求 version.json (無 GitHub API 60次/hr 限流)
         if self.cname_domain:
             try:
@@ -76,7 +135,9 @@ class CheckUpdateWorker(QThread):
                     if resp.status == 200:
                         data = json.loads(resp.read().decode("utf-8"))
                         latest_ver = str(data.get("version", "")).lstrip("v")
-                        notes = data.get("notes", "")
+                        notes_en = data.get("notes_en", "")
+                        notes_zh = data.get("notes", "")
+                        notes = (notes_en if is_en and notes_en else notes_zh) or notes_zh
                         download_url = data.get("download_url", "")
             except Exception:
                 pass
@@ -89,7 +150,13 @@ class CheckUpdateWorker(QThread):
                 with urllib.request.urlopen(req, timeout=8) as resp:
                     data = json.loads(resp.read().decode("utf-8"))
                     latest_ver = str(data.get("tag_name", "")).lstrip("v")
-                    notes = data.get("body", "無更新日誌說明。")
+                    raw_body = data.get("body", "")
+                    if is_en and "Release Notes (English)" in raw_body:
+                        # 若 release body 包含英文段落則截取
+                        parts = raw_body.split("Release Notes (English)")
+                        notes = parts[1].strip() if len(parts) > 1 else raw_body
+                    else:
+                        notes = raw_body or t("update.no_notes", default="無更新日誌說明。")
                     assets = data.get("assets", [])
                     
                     # 搜尋 Inno Setup 產出的 Setup.exe
