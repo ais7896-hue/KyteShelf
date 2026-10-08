@@ -67,7 +67,7 @@
                 <a href="index.html#download"
                     class="px-4 py-2 text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl shadow-md transition flex items-center gap-2">
                     <i class="fa-solid fa-download"></i>
-                    <span>下載最新版 (v1.4.2)</span>
+                    <span>下載最新版 (v1.4.3)</span>
                 </a>
             </div>
         </div>
@@ -135,7 +135,7 @@
                                 <span>安裝與啟動</span>
                             </h4>
                             <p class="text-sm text-slate-600 leading-relaxed">
-                                執行下載的 <code class="px-1.5 py-0.5 bg-slate-200/80 rounded text-xs text-slate-800">KyteShelf_Setup_v1.4.2.exe</code>，按照引導完成安裝。安裝完成後勾選「啟動 KyteShelf」即可立即開始使用。
+                                執行下載的 <code class="px-1.5 py-0.5 bg-slate-200/80 rounded text-xs text-slate-800">KyteShelf_Setup_v1.4.3.exe</code>，按照引導完成安裝。安裝完成後勾選「啟動 KyteShelf」即可立即開始使用。
                             </p>
                         </div>
 
@@ -219,9 +219,9 @@
                                 <i class="fa-solid fa-file-import"></i>
                             </div>
                             <div>
-                                <h4 class="font-bold text-slate-900 mb-1">1. 滑鼠直接拖曳（支援批次）</h4>
+                                <h4 class="font-bold text-slate-900 mb-1">1. 滑鼠直接拖曳（支援批次與 Outlook 附件）</h4>
                                 <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                                    框選 1 個或多達數十個檔案、資料夾，直接拖曳到置物架視窗內部放開即可。置物架會自動讀取檔案圖示、名稱與檔案大小。
+                                    框選 1 個或多達數十個檔案、資料夾，或者<strong>直接將 Microsoft Outlook 郵件中的附件拖曳</strong>至置物架視窗內部放開即可。置物架會自動讀取檔案圖示、名稱與檔案大小並妥善存入。
                                 </p>
                             </div>
                         </div>
@@ -241,6 +241,7 @@
                                     <li><strong>螢幕截圖（如 Win + Shift + S 截圖或瀏覽器複製影像）</strong> ➔ 自動轉換為 PNG 實體檔案並建立縮圖！</li>
                                     <li><strong>純文字筆記</strong> ➔ 自動轉換為高質感黃色「自黏便箋（Sticky Note）」，可雙擊放大編輯！</li>
                                     <li><strong>網址 URL</strong> ➔ 若為圖片網址會自動抓取存檔，一般網址則轉換為連結便利貼。</li>
+                                    <li><em>提示：Outlook 郵件附件建議使用上述模式 1「滑鼠直接拖曳入架」，最為直覺且穩定相容所有版本。</em></li>
                                 </ul>
                             </div>
                         </div>
@@ -298,6 +299,26 @@
                                 選取置物架內的一件或多件檔案，按<strong>滑鼠右鍵</strong> ➔ 點選<strong>「寄送至 Outlook 郵件...」</strong>，KyteShelf 會透過 Windows 原生 COM 介面自動將檔案附加到您正在撰寫的 Outlook 郵件草稿中。
                             </p>
                         </div>
+
+                        <!-- KyteView 生態系連動預覽 -->
+                        <div class="p-5 border border-indigo-200 bg-gradient-to-r from-indigo-50/60 to-sky-50/40 rounded-2xl">
+                            <h4 class="font-bold text-slate-900 mb-2 flex items-center justify-between">
+                                <span class="flex items-center gap-2">
+                                    <i class="fa-solid fa-eye text-indigo-600"></i>
+                                    <span>與 KyteView 跨進程連動：Space 快速預覽</span>
+                                </span>
+                                <span class="text-xs px-2.5 py-1 bg-indigo-100 text-indigo-700 font-bold rounded-lg">生態系連動</span>
+                            </h4>
+                            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed mb-3">
+                                KyteShelf 內建與 <a href="https://kyteview.aisming.com/" target="_blank" class="text-blue-600 font-bold underline hover:text-blue-700">KyteView</a> 原生 Named Pipe IPC 連動協議。在置物架中選取任一檔案：
+                            </p>
+                            <ul class="list-disc list-inside text-xs sm:text-sm text-slate-600 space-y-1.5 pl-2">
+                                <li><strong>按下鍵盤 <kbd class="px-1.5 py-0.5 bg-slate-200 rounded text-xs text-slate-800 font-bold">Space</kbd> 空白鍵</strong>：KyteView 瞬間彈出全功能快速內容預覽（支援高畫質圖片、影片、音訊、PDF 及各類程式代碼）。</li>
+                                <li><strong>滑鼠右鍵選單</strong>：亦可直接在項目上按右鍵點選<strong>「👁️ 以 KyteView 快速預覽」</strong>。</li>
+                                <li><strong>再按一次 <kbd class="px-1.5 py-0.5 bg-slate-200 rounded text-xs text-slate-800 font-bold">Space</kbd> 關閉</strong>：隨時關閉預覽視窗，操作流暢自如。</li>
+                                <li><strong>自動背景喚醒</strong>：若電腦尚未啟動 KyteView，置物架會自動在背景嘗試啟動它；若未安裝 KyteView 亦會安全略過，絕不卡頓。</li>
+                            </ul>
+                        </div>
                     </div>
                 </section>
 
@@ -345,26 +366,141 @@
                         <h2 class="text-2xl font-black text-slate-900">偏好設定詳解</h2>
                     </div>
                     <p class="text-slate-600 leading-relaxed mb-6">
-                        在托盤圖示點右鍵 ➔ 選擇「⚙️ 偏好設定」，或在未釘選的置物架點選齒輪圖示即可進入設定面板。
+                        在系統匣托盤圖示點右鍵 ➔ 選擇「⚙️ 偏好設定」，或在置物架工具列點選齒輪圖示即可進入設定面板。系統分為三大管理板塊：
                     </p>
 
-                    <div class="space-y-4">
-                        <div class="p-4 border border-slate-200 rounded-2xl flex items-start gap-4">
-                            <span class="text-2xl">⚡</span>
-                            <div>
-                                <h4 class="font-bold text-slate-900 mb-1">晃動靈敏度調整 (1 ~ 5 級)</h4>
-                                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                                    預設為「等級 3（標準）」。如果您平常滑鼠移動幅度較大、容易誤觸，可調為「等級 1 ~ 2（防誤觸偏鈍）」；若希望極速微晃即現身，可調為「等級 4 ~ 5（極靈敏）」。
+                    <!-- 分類 1: 召喚與觸發行為 -->
+                    <div class="mb-6">
+                        <h3 class="text-base font-extrabold text-slate-900 mb-3 flex items-center gap-2">
+                            <span class="w-2 h-5 bg-amber-500 rounded-full"></span>
+                            <span>⚡ 召喚與觸發行為</span>
+                        </h3>
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-hand-pointer text-amber-500 text-xs"></i>
+                                    <span>啟用滑鼠晃動召喚 (Shake to Summon)</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    預設啟用。若您習慣只使用鍵盤快捷鍵調用置物架，可取消勾選此項目以完全關閉晃動滑鼠偵測，避免日常操作誤觸。
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-sliders text-amber-500 text-xs"></i>
+                                    <span>晃動靈敏度調整 (1 ~ 5 級)</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    預設為「等級 3（標準）」。若習慣快速揮甩滑鼠擔心誤觸，可設為偏鈍（等級 1~2）；若追求極致輕晃即現身，可調為極靈敏（等級 4~5）。
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-keyboard text-amber-500 text-xs"></i>
+                                    <span>全域快捷鍵自訂錄製</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    支援下拉選單常用預設（如 <kbd class="px-1 py-0.5 bg-slate-200 rounded text-[11px] font-bold">Ctrl + `</kbd>、<kbd class="px-1 py-0.5 bg-slate-200 rounded text-[11px] font-bold">Ctrl + Shift + D</kbd> 等），或點擊輸入框直接錄製專屬鍵位。
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-location-crosshairs text-amber-500 text-xs"></i>
+                                    <span>召喚彈出位置（跟隨游標 vs 記憶位置）</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    可選擇<strong>「跟隨滑鼠游標」</strong>（預設，游標甩到哪架子就出現在哪），或改為<strong>「記憶上次視窗位置」</strong>（固定在您慣用的螢幕角落，適合多螢幕工作者）。
                                 </p>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="p-4 border border-slate-200 rounded-2xl flex items-start gap-4">
-                            <span class="text-2xl">⌨️</span>
-                            <div>
-                                <h4 class="font-bold text-slate-900 mb-1">全域快捷鍵錄製</h4>
-                                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                                    點擊快捷鍵輸入框即可直接在鍵盤按下任意組合鍵（例如 <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-xs">Alt + Space</kbd> 或 <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-xs">Ctrl + Shift + X</kbd>），系統會即時辨識並綁定。
+                    <!-- 分類 2: 置物架與拖曳行為 -->
+                    <div class="mb-6">
+                        <h3 class="text-base font-extrabold text-slate-900 mb-3 flex items-center gap-2">
+                            <span class="w-2 h-5 bg-blue-600 rounded-full"></span>
+                            <span>📂 置物架與拖曳行為</span>
+                        </h3>
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-power-off text-blue-600 text-xs"></i>
+                                    <span>開機時自動啟動 (Launch on Startup)</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    開機進入 Windows 桌面時自動於後台啟動常駐，隨時抓取檔案搖晃立即可用，省去手動開啟的繁瑣步驟。
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-volume-high text-blue-600 text-xs"></i>
+                                    <span>檔案入架提示音效 (Sound Feedback)</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    當檔案、截圖或便箋成功拖入或貼入置物架時，播放極具質感的清脆確認音效，帶來清楚明確的物理回饋。
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-arrow-up-from-bracket text-blue-600 text-xs"></i>
+                                    <span>拖出檔案後自動移除</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    在搬移模式或個別拖出時，檔案成功傳遞到目標視窗即自動從置物架清單中銷帳移除，保持工作區乾淨。
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-eye-slash text-blue-600 text-xs"></i>
+                                    <span>置物架清空後自動隱藏視窗</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    當架內所有檔案都已拖出釋放或清空時，置物架會自動優雅收起，完全不佔用桌面視覺空間。
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50 sm:col-span-2">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-link text-blue-600 text-xs"></i>
+                                    <span>啟用與 KyteView 跨進程連動預覽 (Space)</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    預設啟用。允許在置物架選取檔案後按 <kbd class="px-1.5 py-0.5 bg-slate-200 rounded text-xs font-bold">Space</kbd> 空白鍵或透過右鍵選單呼叫 KyteView 彈出內容預覽。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 分類 3: 系統與暫存管理 -->
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900 mb-3 flex items-center gap-2">
+                            <span class="w-2 h-5 bg-emerald-500 rounded-full"></span>
+                            <span>🌐 系統與暫存管理</span>
+                        </h3>
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-globe text-emerald-500 text-xs"></i>
+                                    <span>多國語言切換 (Language)</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    支援<strong>「跟隨系統語言 (System)」</strong>、<strong>「繁體中文」</strong>與<strong>「English」</strong>，切換無需重啟軟體，介面文字全域即時切換。
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-broom text-emerald-500 text-xs"></i>
+                                    <span>暫存檔案清理策略 (Temp Retention)</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    對於剪貼簿貼入自動產生的截圖與自黏便箋檔案，可選擇<strong>「保留 7 天後自動清理」</strong>（建議）、<strong>「軟體關閉時立即清空」</strong>或<strong>「永不自動清理」</strong>。
                                 </p>
                             </div>
                         </div>
@@ -468,7 +604,7 @@
                         <a href="index.html#download"
                             class="w-full sm:w-auto px-8 py-3.5 bg-white text-blue-700 hover:bg-slate-100 font-bold rounded-xl shadow transition flex items-center justify-center gap-2">
                             <i class="fa-solid fa-download"></i>
-                            <span>免費下載試用版 (v1.4.2)</span>
+                            <span>免費下載試用版 (v1.4.3)</span>
                         </a>
                         <a href="index.html#pricing"
                             class="w-full sm:w-auto px-8 py-3.5 bg-amber-500 text-slate-950 hover:bg-amber-400 font-extrabold rounded-xl shadow transition flex items-center justify-center gap-2">

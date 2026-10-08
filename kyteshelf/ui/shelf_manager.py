@@ -20,7 +20,7 @@ from .shelf_widget import KyteShelfWidget, DropShelfWidget
 
 
 class ShelfManager(QObject):
-    APP_VERSION = "1.4.2"
+    APP_VERSION = "1.4.3"
     REPO_NAME = "ais7896-hue/KyteShelf"
     CNAME_DOMAIN = "kyteshelf.aisming.com"
     def __init__(self, config_manager: ConfigManager = None):
@@ -353,7 +353,13 @@ class ShelfManager(QObject):
             else:
                 target_shelf = self.create_shelf()
             
-        target_shelf.popup_at(x, y)
+        summon_pos = self.config_manager.get("summon_position", "cursor")
+        if summon_pos == "remember" and hasattr(target_shelf, "pos") and target_shelf.x() > 0:
+            target_shelf.show()
+            target_shelf.raise_()
+            target_shelf.activateWindow()
+        else:
+            target_shelf.popup_at(x, y)
 
     def set_watch_folder(self):
         can_watch, reason = self.license_manager.can_use_folder_watch()

@@ -1,10 +1,10 @@
 {
   "app_name": "KyteShelf",
-  "version": "1.4.2",
-  "release_date": "2026-10-07",
+  "version": "1.4.3",
+  "release_date": "2026-10-08",
   "min_supported_version": "1.0.0",
   "mandatory": false,
-  "notes": "1. [新功能] 新增單一實例防多開 IPC 機制，重複啟動自動喚醒置物架\n2. [修復] 英文模式下授權功能限制彈窗與更新選單語系在地化支援\n3. [優化] 強化工作階段與視窗置頂互動體驗",
-  "notes_en": "1. [New] Added single-instance IPC mechanism; relaunching activates the running shelf\n2. [Fix] Full localization for license limits and tray update menus in English mode\n3. [Optimize] Improved shelf session management and window layering experience",
-  "download_url": "https://github.com/ais7896-hue/KyteShelf/releases/download/v1.4.2/KyteShelf_Setup_v1.4.2.exe"
+  "notes": "1. [生態系連動] 與 KyteView 跨進程預覽串接，選取檔案按 Space 快速預覽\n2. [偏好設定] 全新三大分類設定面板，支援開機自啟、音效、拖出自動移除與位置記憶\n3. [修復與相容] 支援 Outlook 郵件附件拖曳入架，修復剪貼簿串流解碼錯誤",
+  "notes_en": "1. [Ecosystem] Seamless KyteView preview integration; press Space to preview files\n2. [Preferences] Redesigned 3-modular settings: startup launch, sound feedback, auto-remove on drag, position memory\n3. [Outlook] Drag-and-drop Outlook attachment support and clipboard stream decoding fixes",
+  "download_url": "https://github.com/ais7896-hue/KyteShelf/releases/download/v1.4.3/KyteShelf_Setup_v1.4.3.exe"
 }

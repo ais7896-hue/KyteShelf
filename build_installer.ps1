@@ -66,7 +66,7 @@ Write-Host "`n[OK] PyInstaller 打包成功！綠色免安裝目錄位於 dist\K
 # 2.5 打包免安裝綠色版 (Portable Zip)
 Write-Host "`n>>> 正在打包免安裝綠色版 (Portable Zip)... " -ForegroundColor Yellow
 if (-not (Test-Path "Output")) { New-Item -ItemType Directory -Force "Output" | Out-Null }
-$appVersion = "1.4.2"
+$appVersion = "1.4.3"
 if (Test-Path "version.json") {
     try {
         $vJson = Get-Content "version.json" -Raw | ConvertFrom-Json
@@ -74,8 +74,11 @@ if (Test-Path "version.json") {
     } catch {}
 } elseif (Test-Path "setup.iss") {
     $line = Get-Content "setup.iss" | Where-Object { $_ -match "MyAppVersion" } | Select-Object -First 1
-    if ($line -match '"([^"]+)"') {
-        $appVersion = $matches[1]
+    if ($line) {
+        $parts = $line.Split('"')
+        if ($parts.Count -gt 1) {
+            $appVersion = $parts[1]
+        }
     }
 }
 $portableZip = "Output\KyteShelf_v$($appVersion)_Portable.zip"

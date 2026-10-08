@@ -104,7 +104,37 @@ TRANSLATIONS = {
     "pref.hotkey_recording": "請按下組合鍵（Esc 取消）...",
     "pref.hotkey_record_tip": "點擊以錄製快捷鍵，按下 Esc 取消",
     
-    # 介面與外觀
+    # 召喚彈出位置
+    "pref.summon_pos_label": "召喚彈出位置：",
+    "pref.summon_pos_cursor": "跟隨滑鼠游標 (預設)",
+    "pref.summon_pos_remember": "記憶上次視窗位置",
+
+    # 置物架與拖曳行為
+    "pref.group_behavior": "📂 置物架與拖曳行為",
+    "pref.autostart": "開機時自動啟動 (Launch on Startup)",
+    "pref.auto_clear_drag_out": "拖出檔案後自動從置物架移除",
+    "pref.auto_hide_empty": "置物架清空後自動隱藏視窗",
+    "pref.default_mode_label": "預設拖曳模式：",
+    "pref.mode_copy_desc": "📋 複製模式（保留來源檔案）",
+    "pref.mode_move_desc": "🚚 搬移模式（移動來源檔案）",
+    "pref.sound_enable": "檔案入架時播放提示音效 (Sound Feedback)",
+    "pref.kyteview_enable": "啟用與 KyteView 跨進程連動預覽 (Space)",
+
+    # 右鍵選單
+    "menu.kyteview_preview": "👁️ 以 KyteView 快速預覽 (Space)",
+    "menu.open_file": "📂 開啟檔案 (Enter)",
+    "menu.locate_explorer": "🔍 在檔案總管中顯示",
+    "menu.remove_item": "🗑️ 從置物架移除 (Delete)",
+
+    # 系統與暫存管理
+    "pref.group_system": "🌐 系統與暫存管理",
+    "pref.temp_retention_label": "暫存檔案清理策略：",
+    "pref.temp_days_7": "保留 7 天後自動清理 (建議)",
+    "pref.temp_exit_clear": "關閉軟體時立即清空暫存",
+    "pref.temp_never": "永不自動清理",
+
+    # 介面與語言
+    "pref.group_general": "🌐 介面與語言設定",
     "pref.group_appearance": "🎨 外觀與介面風格",
     "pref.theme_color": "主題識別色：",
     "pref.language": "介面語言 (Language)：",

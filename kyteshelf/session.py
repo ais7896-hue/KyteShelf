@@ -23,8 +23,18 @@ class SessionManager:
         return appdata / "session.json"
 
     def _cleanup_old_temp_files(self, max_age_days: int = 7):
-        r"""清除 %TEMP%\KyteShelf 內超過 N 天的舊暫存檔（排除目前 session 仍在引用的檔案）"""
-        cutoff = time.time() - max_age_days * 86400
+        r"""清除 %TEMP%\KyteShelf 內符合策略的舊暫存檔（排除目前 session 仍在引用的檔案）"""
+        policy = "days_7"
+        if self.config_manager:
+            policy = self.config_manager.get("temp_retention", "days_7")
+
+        if policy == "never":
+            return
+
+        if policy == "exit_clear":
+            cutoff = time.time()
+        else:
+            cutoff = time.time() - max_age_days * 86400
         active_paths = set()
         if self.session_file.exists():
             try:

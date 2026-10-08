@@ -78,6 +78,8 @@ def main():
     def _cleanup():
         local_server.close()
         manager.save_session()
+        if hasattr(manager, "session_manager") and manager.session_manager:
+            manager.session_manager._cleanup_old_temp_files()
 
     app.aboutToQuit.connect(_cleanup)
     sys.exit(app.exec())

@@ -15,6 +15,14 @@ class ConfigManager(QObject):
         "hotkey_display": "Ctrl + `",
         "theme_color": "#0284C7",
         "language": "system",
+        "autostart": False,
+        "auto_clear_on_drag_out": True,
+        "auto_hide_on_empty": True,
+        "default_drag_mode": "copy",
+        "summon_position": "cursor",
+        "temp_retention": "days_7",
+        "sound_enabled": True,
+        "kyteview_integration": True,
         "last_update_check_time": 0.0,
         "skipped_version": ""
     }

@@ -24,3 +24,53 @@ def get_resource_path(relative_path: str) -> str:
         return str(target)
     
     return os.path.join(os.path.abspath(os.path.dirname(__file__)), relative_path)
+
+
+def set_autostart(enabled: bool) -> bool:
+    """設定或移除 Windows 開機自動啟動註冊表項目"""
+    if sys.platform != "win32":
+        return False
+    try:
+        import winreg
+        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+        app_name = "KyteShelf"
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE) as key:
+            if enabled:
+                if getattr(sys, "frozen", False):
+                    cmd = f'"{sys.executable}"'
+                else:
+                    main_py = os.path.abspath(sys.argv[0])
+                    cmd = f'"{sys.executable}" "{main_py}"'
+                winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, cmd)
+            else:
+                try:
+                    winreg.DeleteValue(key, app_name)
+                except FileNotFoundError:
+                    pass
+        return True
+    except Exception:
+        return False
+
+
+def is_autostart_enabled() -> bool:
+    """檢查目前是否已啟用 Windows 開機自啟動"""
+    if sys.platform != "win32":
+        return False
+    try:
+        import winreg
+        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_READ) as key:
+            winreg.QueryValueEx(key, "KyteShelf")
+            return True
+    except Exception:
+        return False
+
+
+def play_feedback_sound():
+    """播放簡短入架成功反饋音效"""
+    if sys.platform == "win32":
+        try:
+            import winsound
+            winsound.MessageBeep(winsound.MB_OK)
+        except Exception:
+            pass

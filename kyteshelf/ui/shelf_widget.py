@@ -24,6 +24,10 @@ from PySide6.QtWidgets import (
 from .shelf_list import ShelfFileList
 from .sticky_note import StickyNoteWindow, create_sticky_icon
 from ..i18n import t, i18n
+from ..utils import play_feedback_sound
+from ..outlook_helper import (
+    is_outlook_mime_data, extract_attachments_from_outlook_com, extract_virtual_files_from_clipboard
+)
 
 
 class RenameDialog(QDialog):
@@ -561,10 +565,19 @@ class KyteShelfWidget(QWidget):
         # 3. 底部快捷工具列 (Footer Toolbar)
         footer_layout = QHBoxLayout()
         footer_layout.setContentsMargins(0, 1, 0, 0)
-        footer_layout.setSpacing(5)
-
-        self.drag_mode = "copy"
-        self.btn_mode = QPushButton(t("shelf.mode_copy"), self.container)
+        default_mode = "copy"
+        if self.manager and hasattr(self.manager, "config_manager"):
+            try:
+                cfg_obj = getattr(self.manager, "config_manager", None)
+                if cfg_obj and hasattr(cfg_obj, "get"):
+                    val = cfg_obj.get("default_drag_mode", "copy")
+                    if isinstance(val, str) and val in ("copy", "move"):
+                        default_mode = val
+            except Exception:
+                pass
+        self.drag_mode = default_mode
+        mode_btn_text = t("shelf.mode_move") if self.drag_mode == "move" else t("shelf.mode_copy")
+        self.btn_mode = QPushButton(mode_btn_text, self.container)
         self.btn_mode.setCursor(Qt.PointingHandCursor)
         self.btn_mode.setToolTip(t("shelf.mode_tip"))
         self.btn_mode.setStyleSheet("""
@@ -735,6 +748,19 @@ class KyteShelfWidget(QWidget):
             self.hide()
             event.accept()
             return
+        elif event.key() == Qt.Key_Space:
+            if hasattr(self, "list_widget") and self.list_widget.is_kyteview_enabled():
+                item = self.list_widget.currentItem()
+                if item:
+                    path_str = item.data(Qt.UserRole)
+                    if path_str and os.path.exists(path_str):
+                        self.suppress_auto_hide = True
+                        QTimer.singleShot(3000, lambda: setattr(self, "suppress_auto_hide", False))
+                        from ..kyte_ipc import trigger_kyteview_preview_async
+                        trigger_kyteview_preview_async(path_str)
+                        QTimer.singleShot(60, self.list_widget.setFocus)
+                        event.accept()
+                        return
         elif event.key() in (Qt.Key_Delete, Qt.Key_Backspace):
             if hasattr(self, "list_widget"):
                 self.list_widget.delete_selected_items()
@@ -840,9 +866,22 @@ class KyteShelfWidget(QWidget):
             return
 
         mime = event.mimeData()
-        if mime.hasUrls() or mime.hasText() or mime.hasImage():
+        if mime.hasUrls() or mime.hasText() or mime.hasImage() or is_outlook_mime_data(mime):
             event.acceptProposedAction()
             self._apply_container_style(is_drag_hover=True)
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.source() == self.list_widget or event.source() == self or self.is_dragging_out:
+            event.ignore()
+            return
+
+        mime = event.mimeData()
+        if mime.hasUrls() or mime.hasText() or mime.hasImage() or is_outlook_mime_data(mime):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
 
     def dragLeaveEvent(self, event):
         self._apply_container_style(is_drag_hover=False)
@@ -892,8 +931,26 @@ class KyteShelfWidget(QWidget):
         mime = event.mimeData()
         has_handled = False
 
+        # 0. 優先檢查是否為 Outlook 附件或 Windows 虛擬檔案拖曳
+        if is_outlook_mime_data(mime):
+            saved = extract_attachments_from_outlook_com(self.temp_dir)
+            if not saved:
+                saved = extract_virtual_files_from_clipboard(self.temp_dir)
+            if saved:
+                count = 0
+                for p in saved:
+                    if p not in self.file_paths:
+                        if self.add_file_item(p):
+                            count += 1
+                if count > 0:
+                    has_handled = True
+                    self.update_state()
+                    if self.manager:
+                        self.manager.save_session()
+                    self.show_temporary_hint(f"📥 已從 Outlook 加入 {count} 個附件！")
+
         # 1. 優先處理直接攜帶圖片點陣圖的拖曳數據（如某些瀏覽器或圖形軟體）
-        if mime.hasImage():
+        if not has_handled and mime.hasImage():
             image = mime.imageData()
             if image and isinstance(image, QImage) and not image.isNull():
                 ts = int(time.time() * 1000)
@@ -1092,6 +1149,17 @@ class KyteShelfWidget(QWidget):
 
         self.list_widget.addItem(item)
         self.update_state()
+        self._trigger_sound_feedback()
+        return True
+
+    def _trigger_sound_feedback(self):
+        try:
+            if self.manager and hasattr(self.manager, "config_manager"):
+                if not self.manager.config_manager.get("sound_enabled", True):
+                    return
+            play_feedback_sound()
+        except Exception:
+            pass
 
     def paste_from_clipboard(self) -> int:
         """從系統剪貼簿讀取檔案、圖片、文字或網址並加入置物架，回傳加入的項目數量"""
@@ -1134,7 +1202,26 @@ class KyteShelfWidget(QWidget):
                 self.show_temporary_hint("📋 已貼入 1 張圖片檔案！")
                 return added_count
 
-        # 3. 若無實體點陣圖，檢查 HTTP/HTTPS 網址（是否為遠端圖片網址）
+        # 3. 核心新增：檢查是否為 Outlook 附件或 Windows 虛擬檔案（自 Outlook 附件 Ctrl+C）
+        saved_outlook_files = []
+        if is_outlook_mime_data(mime) or sys.platform == "win32":
+            saved_outlook_files = extract_virtual_files_from_clipboard(self.temp_dir)
+            if not saved_outlook_files:
+                saved_outlook_files = extract_attachments_from_outlook_com(self.temp_dir)
+
+        if saved_outlook_files:
+            for p in saved_outlook_files:
+                if p not in self.file_paths:
+                    if self.add_file_item(p):
+                        added_count += 1
+            if added_count > 0:
+                self.update_state()
+                if self.manager:
+                    self.manager.save_session()
+                self.show_temporary_hint(f"📋 已從 Outlook 貼入 {added_count} 個附件！")
+                return added_count
+
+        # 4. 若無實體點陣圖，檢查 HTTP/HTTPS 網址（是否為遠端圖片網址）
         if mime.hasUrls():
             for url in mime.urls():
                 if url.scheme() in ["http", "https"]:

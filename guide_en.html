@@ -65,7 +65,7 @@
                 <a href="index.html#download"
                     class="px-4 py-2 text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl shadow-md transition flex items-center gap-2">
                     <i class="fa-solid fa-download"></i>
-                    <span>Download v1.4.2</span>
+                    <span>Download v1.4.3</span>
                 </a>
             </div>
         </div>
@@ -133,7 +133,7 @@
                                 <span>Installation & Launch</span>
                             </h4>
                             <p class="text-sm text-slate-600 leading-relaxed">
-                                Run the downloaded <code class="px-1.5 py-0.5 bg-slate-200/80 rounded text-xs text-slate-800">KyteShelf_Setup_v1.4.2.exe</code> and follow the prompt instructions. Check "Launch KyteShelf" upon completion to start right away.
+                                Run the downloaded <code class="px-1.5 py-0.5 bg-slate-200/80 rounded text-xs text-slate-800">KyteShelf_Setup_v1.4.3.exe</code> and follow the prompt instructions. Check "Launch KyteShelf" upon completion to start right away.
                             </p>
                         </div>
 
@@ -217,9 +217,9 @@
                                 <i class="fa-solid fa-file-import"></i>
                             </div>
                             <div>
-                                <h4 class="font-bold text-slate-900 mb-1">1. Direct Mouse Drag & Drop (Batch Supported)</h4>
+                                <h4 class="font-bold text-slate-900 mb-1">1. Direct Mouse Drag & Drop (Batch & Outlook Attachments)</h4>
                                 <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                                    Select one or dozens of files and folders, then drag them into the shelf. KyteShelf automatically extracts file icons, names, and sizes instantly.
+                                    Select one or dozens of files and folders, or <strong>drag attachments directly from Microsoft Outlook emails</strong> into the shelf. KyteShelf automatically extracts file icons, names, and sizes instantly.
                                 </p>
                             </div>
                         </div>
@@ -239,6 +239,7 @@
                                     <li><strong>Screenshots (e.g. Win + Shift + S or copied images)</strong> ➔ Automatically saved as PNG files with live previews!</li>
                                     <li><strong>Plain Text & Snippets</strong> ➔ Transformed into attractive yellow "Sticky Notes", double-click to expand and edit!</li>
                                     <li><strong>Web URLs</strong> ➔ Image URLs are fetched and downloaded locally; general links become clickable web bookmarks.</li>
+                                    <li><em>Tip: For Microsoft Outlook attachments, dragging directly into the shelf (Mode 1 above) is recommended for seamless compatibility across all Outlook versions.</em></li>
                                 </ul>
                             </div>
                         </div>
@@ -296,6 +297,26 @@
                                 Select one or multiple items on the shelf, <strong>right-click</strong> ➔ choose <strong>"Attach to Active Outlook Draft"</strong>. KyteShelf connects directly through native Windows COM APIs to attach files into your open email editor.
                             </p>
                         </div>
+
+                        <!-- KyteView Ecosystem Integration Preview -->
+                        <div class="p-5 border border-indigo-200 bg-gradient-to-r from-indigo-50/60 to-sky-50/40 rounded-2xl">
+                            <h4 class="font-bold text-slate-900 mb-2 flex items-center justify-between">
+                                <span class="flex items-center gap-2">
+                                    <i class="fa-solid fa-eye text-indigo-600"></i>
+                                    <span>KyteView Inter-Process Integration: Space Quick Preview</span>
+                                </span>
+                                <span class="text-xs px-2.5 py-1 bg-indigo-100 text-indigo-700 font-bold rounded-lg">Ecosystem</span>
+                            </h4>
+                            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed mb-3">
+                                KyteShelf comes with native Windows Named Pipe IPC integration for <a href="https://kyteview.aisming.com/" target="_blank" class="text-blue-600 font-bold underline hover:text-blue-700">KyteView</a>. Select any file on your shelf:
+                            </p>
+                            <ul class="list-disc list-inside text-xs sm:text-sm text-slate-600 space-y-1.5 pl-2">
+                                <li><strong>Press <kbd class="px-1.5 py-0.5 bg-slate-200 rounded text-xs text-slate-800 font-bold">Space</kbd></strong>: KyteView pops up instantly with rich content previews (high-res images, 4K videos, audio, PDFs, Office docs, code, and archives).</li>
+                                <li><strong>Context Menu</strong>: You can also right-click an item and select <strong>"👁️ Quick Preview with KyteView"</strong>.</li>
+                                <li><strong>Press <kbd class="px-1.5 py-0.5 bg-slate-200 rounded text-xs text-slate-800 font-bold">Space</kbd> Again to Toggle</strong>: Seamlessly dismiss the preview window at any time.</li>
+                                <li><strong>Background Auto-Wake</strong>: If KyteView is not running, KyteShelf will automatically wake it up silently in the background; if not installed, it gracefully falls back without any lag.</li>
+                            </ul>
+                        </div>
                     </div>
                 </section>
 
@@ -337,32 +358,148 @@
                 </section>
 
                 <!-- 6. Preferences & Tuning -->
+                <!-- 6. Preferences & Customization -->
                 <section id="section-settings" class="doc-section bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-sm">
                     <div class="flex items-center gap-3 text-blue-600 mb-4">
                         <span class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center font-black text-sm">06</span>
                         <h2 class="text-2xl font-black text-slate-900">Preferences & Customization</h2>
                     </div>
                     <p class="text-slate-600 leading-relaxed mb-6">
-                        Right-click the tray icon ➔ select "⚙️ Preferences", or click the gear icon on any unpinned shelf to enter the settings dialog.
+                        Right-click the tray icon ➔ select "⚙️ Preferences", or click the gear icon on the shelf toolbar to enter the settings panel. Options are divided into 3 modular sections:
                     </p>
 
-                    <div class="space-y-4">
-                        <div class="p-4 border border-slate-200 rounded-2xl flex items-start gap-4">
-                            <span class="text-2xl">⚡</span>
-                            <div>
-                                <h4 class="font-bold text-slate-900 mb-1">Shake Sensitivity Levels (1 to 5)</h4>
-                                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                                    Default is "Level 3 (Standard)". If you move your cursor aggressively and want to avoid misclicks, choose "Level 1 ~ 2 (Strict)". If you prefer minimal movement summoning, switch to "Level 4 ~ 5 (Ultra-Sensitive)".
+                    <!-- Group 1: Summon & Trigger Behaviors -->
+                    <div class="mb-6">
+                        <h3 class="text-base font-extrabold text-slate-900 mb-3 flex items-center gap-2">
+                            <span class="w-2 h-5 bg-amber-500 rounded-full"></span>
+                            <span>⚡ Summon & Trigger Behaviors</span>
+                        </h3>
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-hand-pointer text-amber-500 text-xs"></i>
+                                    <span>Enable Mouse Shake Summon</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    Enabled by default. If you prefer to summon the shelf exclusively using hotkeys, uncheck this option to disable mouse shake detection completely.
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-sliders text-amber-500 text-xs"></i>
+                                    <span>Shake Sensitivity (Level 1 to 5)</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    Default is "Level 3 (Standard)". If you move your mouse aggressively, pick Level 1~2 to prevent false triggers; if you prefer micro-shake summoning, choose Level 4~5.
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-keyboard text-amber-500 text-xs"></i>
+                                    <span>Global Hotkey Recorder</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    Select from popular presets (like <kbd class="px-1 py-0.5 bg-slate-200 rounded text-[11px] font-bold">Ctrl + `</kbd>, <kbd class="px-1 py-0.5 bg-slate-200 rounded text-[11px] font-bold">Ctrl + Shift + D</kbd>), or click into the field to record your own custom keys.
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-location-crosshairs text-amber-500 text-xs"></i>
+                                    <span>Summon Position (Follow Cursor vs Remember Position)</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    Choose <strong>"Follow Mouse Cursor"</strong> (shelf appears right next to where you shake), or <strong>"Remember Last Window Position"</strong> (shelf stays anchored to your favorite screen corner).
                                 </p>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="p-4 border border-slate-200 rounded-2xl flex items-start gap-4">
-                            <span class="text-2xl">⌨️</span>
-                            <div>
-                                <h4 class="font-bold text-slate-900 mb-1">Custom Global Hotkey Recorder</h4>
-                                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                                    Click into the hotkey input field and press any key combination (e.g., <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-xs">Alt + Space</kbd> or <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-xs">Ctrl + Shift + X</kbd>) to bind your custom shortcut on the fly.
+                    <!-- Group 2: Shelf & Drag Behaviors -->
+                    <div class="mb-6">
+                        <h3 class="text-base font-extrabold text-slate-900 mb-3 flex items-center gap-2">
+                            <span class="w-2 h-5 bg-blue-600 rounded-full"></span>
+                            <span>📂 Shelf & Drag Behaviors</span>
+                        </h3>
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-power-off text-blue-600 text-xs"></i>
+                                    <span>Launch on Startup</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    Automatically start KyteShelf minimized in the tray upon Windows login, ensuring your shelf is always ready without manual startup.
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-volume-high text-blue-600 text-xs"></i>
+                                    <span>Sound Feedback</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    Plays a subtle, premium feedback click sound whenever files, screenshots, or notes land onto the shelf.
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-arrow-up-from-bracket text-blue-600 text-xs"></i>
+                                    <span>Auto-Remove on Drag Out</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    In move mode or individual drags, items are automatically cleared from the shelf once dropped onto a target window.
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-eye-slash text-blue-600 text-xs"></i>
+                                    <span>Auto-Hide When Empty</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    When all items on the shelf are dragged out or cleared, the shelf window gracefully retreats to keep your desktop distraction-free.
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50 sm:col-span-2">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-link text-blue-600 text-xs"></i>
+                                    <span>Enable KyteView Integration Preview (Space)</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    Enabled by default. Allows selecting any file in the shelf and pressing <kbd class="px-1.5 py-0.5 bg-slate-200 rounded text-xs font-bold">Space</kbd> or using the context menu to summon KyteView for instant rich file previews.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Group 3: System & Cache Management -->
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900 mb-3 flex items-center gap-2">
+                            <span class="w-2 h-5 bg-emerald-500 rounded-full"></span>
+                            <span>🌐 System & Cache Management</span>
+                        </h3>
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-globe text-emerald-500 text-xs"></i>
+                                    <span>Interface Language</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    Switch between <strong>"System Default"</strong>, <strong>"Traditional Chinese"</strong>, and <strong>"English"</strong> on the fly without restarting the application.
+                                </p>
+                            </div>
+
+                            <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+                                <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-broom text-emerald-500 text-xs"></i>
+                                    <span>Temp Cache Retention Policy</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    For temporary screenshots and sticky notes created via clipboard, choose <strong>"Auto-clean after 7 days"</strong> (recommended), <strong>"Clear on app exit"</strong>, or <strong>"Never auto-clean"</strong>.
                                 </p>
                             </div>
                         </div>
@@ -466,7 +603,7 @@
                         <a href="index.html#download"
                             class="w-full sm:w-auto px-8 py-3.5 bg-white text-blue-700 hover:bg-slate-100 font-bold rounded-xl shadow transition flex items-center justify-center gap-2">
                             <i class="fa-solid fa-download"></i>
-                            <span>Download Free Trial (v1.4.2)</span>
+                            <span>Download Free Trial (v1.4.3)</span>
                         </a>
                         <a href="index.html#pricing"
                             class="w-full sm:w-auto px-8 py-3.5 bg-amber-500 text-slate-950 hover:bg-amber-400 font-extrabold rounded-xl shadow transition flex items-center justify-center gap-2">

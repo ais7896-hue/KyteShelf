@@ -315,7 +315,7 @@ class LicenseManager(QObject):
                 data=req_data,
                 headers={
                     "Content-Type": "application/json; charset=utf-8",
-                    "User-Agent": "KyteShelf-Client/1.4.2 (Windows NT 10.0; Win64; x64)"
+                    "User-Agent": "KyteShelf-Client/1.4.3 (Windows NT 10.0; Win64; x64)"
                 },
                 method="POST"
             )
@@ -375,7 +375,7 @@ class LicenseManager(QObject):
                 data=req_data,
                 headers={
                     "Content-Type": "application/json; charset=utf-8",
-                    "User-Agent": "KyteShelf-Client/1.4.2 (Windows NT 10.0; Win64; x64)"
+                    "User-Agent": "KyteShelf-Client/1.4.3 (Windows NT 10.0; Win64; x64)"
                 },
                 method="POST"
             )

@@ -104,7 +104,37 @@ TRANSLATIONS = {
     "pref.hotkey_recording": "Press shortcut keys (Esc to cancel)...",
     "pref.hotkey_record_tip": "Click to record shortcut, press Esc to cancel",
     
+    # Summon Position
+    "pref.summon_pos_label": "Summon Position:",
+    "pref.summon_pos_cursor": "Follow Mouse Cursor (Default)",
+    "pref.summon_pos_remember": "Remember Last Window Position",
+
+    # Shelf & Drag Behaviors
+    "pref.group_behavior": "📂 Shelf & Drag Behaviors",
+    "pref.autostart": "Launch on Startup",
+    "pref.auto_clear_drag_out": "Auto-remove item after dragging out",
+    "pref.auto_hide_empty": "Auto-hide shelf when empty",
+    "pref.default_mode_label": "Default Drag Mode:",
+    "pref.mode_copy_desc": "📋 Copy Mode (Keep source files)",
+    "pref.mode_move_desc": "🚚 Move Mode (Move source files)",
+    "pref.sound_enable": "Play sound on item drop/paste (Sound Feedback)",
+    "pref.kyteview_enable": "Enable KyteView Integration Preview (Space)",
+
+    # Context Menu
+    "menu.kyteview_preview": "👁️ Quick Preview with KyteView (Space)",
+    "menu.open_file": "📂 Open File (Enter)",
+    "menu.locate_explorer": "🔍 Reveal in File Explorer",
+    "menu.remove_item": "🗑️ Remove from Shelf (Delete)",
+
+    # System & Cache Management
+    "pref.group_system": "🌐 System & Cache Management",
+    "pref.temp_retention_label": "Temp Cache Cleanup Policy:",
+    "pref.temp_days_7": "Auto-clean after 7 days (Recommended)",
+    "pref.temp_exit_clear": "Clear cache immediately on app exit",
+    "pref.temp_never": "Never auto-clean",
+
     # Appearance & Language
+    "pref.group_general": "🌐 Interface & Language",
     "pref.group_appearance": "🎨 Appearance & Interface",
     "pref.theme_color": "Theme Accent Color:",
     "pref.language": "Interface Language:",

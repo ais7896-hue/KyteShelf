@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 from .sticky_note import StickyNoteWindow
 from .image_preview import ImagePreviewPopup
 from ..i18n import t
+from ..kyte_ipc import trigger_kyteview_preview_async, update_kyteview_preview_async
 
 
 class ShelfItemDelegate(QStyledItemDelegate):
@@ -74,8 +75,6 @@ class ShelfFileList(QListWidget):
         self.setIconSize(QSize(32, 32))
         self.setSelectionMode(QListWidget.ExtendedSelection)
         self.setSpacing(4)
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.open_menu)
         self.itemDoubleClicked.connect(self.open_file)
 
         self.hovered_row = -1
@@ -95,6 +94,14 @@ class ShelfFileList(QListWidget):
         self.preview_timer.timeout.connect(self._trigger_preview)
         self._pending_preview_path = ""
         self._pending_preview_pos = QPoint()
+
+        # KyteView 即時預覽防抖定時器 (30ms，方向鍵移動與選取變更時極致流暢同步)
+        self._kyteview_sync_timer = QTimer(self)
+        self._kyteview_sync_timer.setSingleShot(True)
+        self._kyteview_sync_timer.setInterval(30)
+        self._kyteview_sync_timer.timeout.connect(self._sync_kyteview_preview)
+        self.currentItemChanged.connect(self._on_current_item_changed)
+        self.itemSelectionChanged.connect(self._on_selection_changed)
 
         self.setStyleSheet("""
             QListWidget {
@@ -283,8 +290,124 @@ class ShelfFileList(QListWidget):
             if self.shelf_window.manager:
                 QTimer.singleShot(0, self.shelf_window.manager.save_session)
 
+    def is_kyteview_enabled(self) -> bool:
+        if self.shelf_window and getattr(self.shelf_window, "manager", None) and hasattr(self.shelf_window.manager, "config_manager"):
+            return self.shelf_window.manager.config_manager.config.get("kyteview_integration", True)
+        return True
+
+    def _on_current_item_changed(self, current, previous):
+        if current and self.is_kyteview_enabled():
+            self._kyteview_sync_timer.start()
+
+    def _on_selection_changed(self):
+        if self.is_kyteview_enabled():
+            self._kyteview_sync_timer.start()
+
+    def _sync_kyteview_preview(self):
+        item = self.currentItem()
+        if item:
+            path_str = item.data(Qt.UserRole)
+            if path_str and os.path.exists(path_str):
+                update_kyteview_preview_async(path_str)
+
+    def contextMenuEvent(self, event):
+        pos = event.pos()
+        item = self.itemAt(pos)
+        if not item:
+            item = self.currentItem()
+        if not item:
+            return
+
+        # 右鍵點擊時選取該項目
+        self.setCurrentItem(item)
+
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #FFFFFF;
+                border: 1px solid #CBD5E1;
+                border-radius: 8px;
+                padding: 4px;
+            }
+            QMenu::item {
+                padding: 6px 20px 6px 12px;
+                border-radius: 4px;
+                color: #1E293B;
+                font-size: 12px;
+            }
+            QMenu::item:selected {
+                background-color: #F1F5F9;
+                color: #0284C7;
+            }
+        """)
+
+        path_str = item.data(Qt.UserRole)
+        is_file = bool(path_str and os.path.exists(path_str))
+        is_kyteview_on = self.is_kyteview_enabled()
+
+        if is_file and is_kyteview_on:
+            act_preview = menu.addAction(t("menu.kyteview_preview"))
+            def _trigger_from_menu():
+                if self.shelf_window:
+                    self.shelf_window.suppress_auto_hide = True
+                    QTimer.singleShot(3000, lambda: setattr(self.shelf_window, "suppress_auto_hide", False))
+                trigger_kyteview_preview_async(path_str)
+                QTimer.singleShot(60, self.setFocus)
+            act_preview.triggered.connect(_trigger_from_menu)
+
+        act_open = menu.addAction(t("menu.open_file"))
+        act_open.triggered.connect(lambda: self.open_file(item))
+
+        if is_file and sys.platform == "win32":
+            act_locate = menu.addAction(t("menu.locate_explorer"))
+            act_locate.triggered.connect(lambda: self._locate_in_explorer(path_str))
+
+        menu.addSeparator()
+        act_del = menu.addAction(t("menu.remove_item"))
+        act_del.triggered.connect(lambda: self.delete_item(item))
+
+        menu.exec(event.globalPos())
+        event.accept()
+
+    def open_menu(self, pos):
+        """相容自訂選單呼叫"""
+        item = self.itemAt(pos)
+        if not item:
+            return
+        self.setCurrentItem(item)
+        # 轉發給 contextMenuEvent 相同的邏輯
+        global_pos = self.viewport().mapToGlobal(pos)
+        from PySide6.QtGui import QContextMenuEvent
+        c_event = QContextMenuEvent(QContextMenuEvent.Mouse, pos, global_pos)
+        self.contextMenuEvent(c_event)
+
+    def _locate_in_explorer(self, file_path: str):
+        if os.path.exists(file_path):
+            norm_path = os.path.normpath(file_path)
+            subprocess.Popen(f'explorer /select,"{norm_path}"')
+
     def keyPressEvent(self, event):
-        if event.key() in (Qt.Key_Delete, Qt.Key_Backspace):
+        if event.key() == Qt.Key_Space:
+            if self.is_kyteview_enabled():
+                item = self.currentItem()
+                if item:
+                    path_str = item.data(Qt.UserRole)
+                    if path_str and os.path.exists(path_str):
+                        if self.shelf_window:
+                            self.shelf_window.suppress_auto_hide = True
+                            QTimer.singleShot(3000, lambda: setattr(self.shelf_window, "suppress_auto_hide", False))
+                        trigger_kyteview_preview_async(path_str)
+                        # 保持焦點在清單上，讓使用者能連續按方向鍵切換預覽
+                        QTimer.singleShot(60, self.setFocus)
+                        event.accept()
+                        return
+        elif event.key() in (Qt.Key_Return, Qt.Key_Enter):
+            item = self.currentItem()
+            if item:
+                self.open_file(item)
+                event.accept()
+                return
+        elif event.key() in (Qt.Key_Delete, Qt.Key_Backspace):
             self.delete_selected_items()
             event.accept()
             return
@@ -293,7 +416,13 @@ class ShelfFileList(QListWidget):
                 self.shelf_window.paste_from_clipboard()
                 event.accept()
                 return
+
         super().keyPressEvent(event)
+
+        # 方向鍵移動游標後，即時觸發 KyteView 預覽同步！
+        if event.key() in (Qt.Key_Up, Qt.Key_Down, Qt.Key_Left, Qt.Key_Right, Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Home, Qt.Key_End):
+            if self.is_kyteview_enabled():
+                self._sync_kyteview_preview()
 
     def mousePressEvent(self, event):
         self.hide_preview()
@@ -473,18 +602,28 @@ class ShelfFileList(QListWidget):
             return
 
         if action != Qt.IgnoreAction:
-            for item in selected_items:
-                path = item.data(Qt.UserRole)
-                self.shelf_window._delete_temp_if_sticky(path)
-                if path in self.shelf_window.file_paths:
-                    self.shelf_window.file_paths.remove(path)
-                self.takeItem(self.row(item))
+            auto_clear = True
+            auto_hide = True
+            if self.shelf_window and self.shelf_window.manager and hasattr(self.shelf_window.manager, "config_manager"):
+                cfg = self.shelf_window.manager.config_manager
+                auto_clear = cfg.get("auto_clear_on_drag_out", True)
+                auto_hide = cfg.get("auto_hide_on_empty", True)
 
-            self.shelf_window.update_state()
-            if self.shelf_window.manager:
-                self.shelf_window.manager.save_session()
+            should_remove = (getattr(self.shelf_window, 'drag_mode', 'copy') == 'move') or auto_clear
 
-            if len(self.shelf_window.file_paths) == 0 and not self.shelf_window.is_pinned:
+            if should_remove:
+                for item in selected_items:
+                    path = item.data(Qt.UserRole)
+                    self.shelf_window._delete_temp_if_sticky(path)
+                    if path in self.shelf_window.file_paths:
+                        self.shelf_window.file_paths.remove(path)
+                    self.takeItem(self.row(item))
+
+                self.shelf_window.update_state()
+                if self.shelf_window.manager:
+                    self.shelf_window.manager.save_session()
+
+            if auto_hide and len(self.shelf_window.file_paths) == 0 and not self.shelf_window.is_pinned:
                 self.shelf_window.hide()
 
     def mouseReleaseEvent(self, event):
@@ -724,3 +863,27 @@ class ShelfFileList(QListWidget):
             self.takeItem(self.row(item))
             self.shelf_window.add_file_item(str(new_filepath))
         self.shelf_window.update_state()
+
+    def dragEnterEvent(self, event):
+        if self.shelf_window:
+            self.shelf_window.dragEnterEvent(event)
+        else:
+            super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        if self.shelf_window:
+            self.shelf_window.dragMoveEvent(event)
+        else:
+            super().dragMoveEvent(event)
+
+    def dragLeaveEvent(self, event):
+        if self.shelf_window:
+            self.shelf_window.dragLeaveEvent(event)
+        else:
+            super().dragLeaveEvent(event)
+
+    def dropEvent(self, event):
+        if self.shelf_window:
+            self.shelf_window.dropEvent(event)
+        else:
+            super().dropEvent(event)
