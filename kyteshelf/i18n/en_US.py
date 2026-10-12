@@ -1,4 +1,4 @@
-"""
+﻿"""
 KyteShelf English Translation Dictionary
 """
 
@@ -35,7 +35,7 @@ TRANSLATIONS = {
     "tray.license_mgr": "🔑 License / Activate Pro...",
     "tray.license_status_pro": "✨ Pro Edition (Activated)",
     "tray.license_status_trial": "⏳ Pro Trial ({days} days left)...",
-    "tray.license_status_free": "🟡 Free Edition (Upgrade Pro NT$ 399)...",
+    "tray.license_status_free": "🟡 Free Edition (Upgrade Pro NT$ 299)...",
     "tray.new_sticky_note": "New Sticky Note",
     "tray.shelf_history": "Shelf History...",
     "tray.preferences": "⚙️ Preferences...",
@@ -54,7 +54,7 @@ TRANSLATIONS = {
     "tray.watch_stopped": "Folder watching stopped",
     "license.free_limit_title": "Free Edition Limit",
     "license.pro_feature_title": "Pro Exclusive Feature",
-    "license.limit_shelves_msg": "【Free Edition Limit】\n\nYour 14-day full trial has expired. The free edition allows up to {max_count} shelf at the same time.\nUpgrade to Pro Edition (Lifetime NT$ 399) to unlock unlimited shelves!",
+    "license.limit_shelves_msg": "【Free Edition Limit】\n\nYour 14-day full trial has expired. The free edition allows up to {max_count} shelf at the same time.\nUpgrade to Pro Edition (Lifetime NT$ 299) to unlock unlimited shelves!",
     "license.limit_files_msg": "【Free Edition Limit】\n\nYour 14-day full trial has expired. The free edition is limited to {max_count} files per shelf.\nOnly the first {allowed_count} items have been added.\nUpgrade to Pro Edition to unlock unlimited file storage!",
     "license.pro_feature_zip_msg": "【Pro Exclusive Feature】\n\n\"One-Click Pack to ZIP\" is a Pro feature.\nUpgrade to Pro to enjoy full productivity tools forever!",
     "license.pro_feature_watch_msg": "【Pro Exclusive Feature】\n\n\"Real-Time Folder Watch & Auto Collect\" is a Pro feature.\nUpgrade to Pro to unlock automated folder watching!",
@@ -282,13 +282,13 @@ TRANSLATIONS = {
     "license.status_trial_badge": "🔵 Pro Full Trial Active ({days} days remaining)",
     "license.status_trial_desc": "You are enjoying all Pro features (unlimited shelves, unlimited files, ZIP packaging, live folder monitoring).<br>Will switch to Free edition once trial expires. You can purchase a key anytime.",
     "license.status_free_badge": "🟡 Free Edition Mode",
-    "license.status_free_desc": "Your 14-day trial has concluded. KyteShelf is now running in Free mode (1 shelf, up to 5 items per shelf).<br>Upgrade to Pro for NT$ 399 to unlock lifetime unlimited productivity!",
+    "license.status_free_desc": "Your 14-day trial has concluded. KyteShelf is now running in Free mode (1 shelf, up to 5 items per shelf).<br>Upgrade to Pro for NT$ 299 to unlock lifetime unlimited productivity!",
     "license.input_key_title": "Enter License Key:",
     "license.input_placeholder": "e.g. KS-XXXX-XXXX-XXXX",
     "license.btn_deactivate": "🔄 Deactivate This PC (Transfer License)",
     "license.hw_title": "Hardware ID:",
     "license.btn_copy_hw": "Copy Full Hardware ID",
-    "license.btn_buy_shopee": "🛒 Buy License Key on Official Website (NT$ 399)",
+    "license.btn_buy_shopee": "🛒 Buy License Key on Official Website (NT$ 299)",
     "license.support_footer": "Technical Support & Inquiries:",
     "license.empty_key_warn": "Please enter a license key first",
     "license.connecting": "Connecting to license server...",

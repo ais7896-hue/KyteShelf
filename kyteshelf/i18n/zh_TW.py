@@ -1,4 +1,4 @@
-"""
+﻿"""
 KyteShelf 繁體中文語系字典
 """
 
@@ -35,7 +35,7 @@ TRANSLATIONS = {
     "tray.license_mgr": "🔑 軟體授權 / 開通專業版...",
     "tray.license_status_pro": "✨ 專業版授權 (已開通)",
     "tray.license_status_trial": "⏳ 專業版試用中 (剩餘 {days} 天)...",
-    "tray.license_status_free": "🟡 基礎免費版 (升級 Pro NT$ 399)...",
+    "tray.license_status_free": "🟡 基礎免費版 (升級 Pro NT$ 299)...",
     "tray.new_sticky_note": "新增快速便利貼",
     "tray.shelf_history": "置物架歷史清單",
     "tray.preferences": "⚙️ 偏好設定...",
@@ -54,7 +54,7 @@ TRANSLATIONS = {
     "tray.watch_stopped": "已停止監控資料夾",
     "license.free_limit_title": "基礎免費版限制",
     "license.pro_feature_title": "Pro 專業版專屬功能",
-    "license.limit_shelves_msg": "【基礎免費版限制】\n\n您的 14 天全功能試用已結束，免費版最多同時使用 {max_count} 個置物架。\n升級為 Pro 專業版（買斷制 NT$ 399）即可解鎖無限置物架！",
+    "license.limit_shelves_msg": "【基礎免費版限制】\n\n您的 14 天全功能試用已結束，免費版最多同時使用 {max_count} 個置物架。\n升級為 Pro 專業版（買斷制 NT$ 299）即可解鎖無限置物架！",
     "license.limit_files_msg": "【基礎免費版限制】\n\n您的 14 天全功能試用已結束，免費版單一置物架上限為 {max_count} 個檔案。\n本次僅為您收納前 {allowed_count} 個項目。\n升級為 Pro 專業版即可解鎖無限檔案收納容量！",
     "license.pro_feature_zip_msg": "【Pro 專業版專屬功能】\n\n「一鍵打包壓縮為 ZIP」屬於 Pro 專業版功能。\n升級 Pro 即可永久享用完整生產力工具鏈！",
     "license.pro_feature_watch_msg": "【Pro 專業版專屬功能】\n\n「資料夾即時監控自動入架」屬於 Pro 專業版功能。\n升級 Pro 即可解鎖全自動監控流程！",
@@ -282,13 +282,13 @@ TRANSLATIONS = {
     "license.status_trial_badge": "🔵 專業版全功能試用中（剩餘 {days} 天）",
     "license.status_trial_desc": "您目前享有專業版全部無限制功能（無限置物架、無限檔案容量、ZIP 打包、資料夾即時監控）。<br>試用期滿後將自動切換為基礎免費版。您隨時可以購買序號開通永久買斷版。",
     "license.status_free_badge": "🟡 基礎免費版模式",
-    "license.status_free_desc": "您的 14 天全功能試用已結束，軟體已切換為【基礎免費版】（支援 1 個置物架、單架上限 5 個檔案）。<br>歡迎以 NT$ 399 購買序號解鎖永久無限制專業版，感謝支持獨立開發者！",
+    "license.status_free_desc": "您的 14 天全功能試用已結束，軟體已切換為【基礎免費版】（支援 1 個置物架、單架上限 5 個檔案）。<br>歡迎以 NT$ 299 購買序號解鎖永久無限制專業版，感謝支持獨立開發者！",
     "license.input_key_title": "輸入授權序號：",
     "license.input_placeholder": "例：KS-XXXX-XXXX-XXXX",
     "license.btn_deactivate": "🔄 解除此電腦綁定 (更換電腦釋放名額)",
     "license.hw_title": "本機識別碼：",
     "license.btn_copy_hw": "複製完整識別碼",
-    "license.btn_buy_shopee": "🛒 前往官方網站購買正版序號 (NT$ 399)",
+    "license.btn_buy_shopee": "🛒 前往官方網站購買正版序號 (NT$ 299)",
     "license.support_footer": "技術支援與售後聯絡：",
     "license.empty_key_warn": "請先輸入授權序號",
     "license.connecting": "正在連接授權伺服器...",
