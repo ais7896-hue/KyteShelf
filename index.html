@@ -820,6 +820,31 @@
             });
         }
     </script>
+    <script>
+        // 強制確保導覽列與頁尾「技術專欄 / Blog」隨語系即時切換 (防舊版 i18n.js 快取)
+        (function () {
+            function syncBlogNavLang() {
+                if (typeof TRANSLATIONS !== 'undefined') {
+                    if (TRANSLATIONS.zh_TW) TRANSLATIONS.zh_TW['nav.blog'] = '技術專欄';
+                    if (TRANSLATIONS.en_US) TRANSLATIONS.en_US['nav.blog'] = 'Blog';
+                }
+                const isEn = (typeof currentLang !== 'undefined' && currentLang === 'en_US') ||
+                             document.documentElement.lang === 'en';
+                document.querySelectorAll('[data-i18n="nav.blog"]').forEach(el => {
+                    el.textContent = isEn ? 'Blog' : '技術專欄';
+                });
+                document.querySelectorAll('a[href="blog/"], a[href="blog/en/"]').forEach(a => {
+                    a.href = isEn ? 'blog/en/' : 'blog/';
+                });
+            }
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(syncBlogNavLang, 0);
+                const btn = document.getElementById('lang-toggle-btn');
+                if (btn) btn.addEventListener('click', () => setTimeout(syncBlogNavLang, 0));
+            });
+            syncBlogNavLang();
+        })();
+    </script>
 </body>
 
 </html>
