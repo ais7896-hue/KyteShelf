@@ -22,6 +22,7 @@ const TRANSLATIONS = {
         "hero.btn_buy": "取得終身買斷版 (NT$ 299 / $9.99 USD)",
         "hero.btn_installer": "下載安裝版 (v1.4.3)",
         "hero.btn_portable": "免安裝綠色版 (.zip)",
+        "hero.btn_msstore": "Microsoft Store (審核中)",
 
         "shelf.name": "置物架 #1",
         "shelf.item1_title": "首頁主視覺草稿_v3.png",
@@ -80,6 +81,7 @@ const TRANSLATIONS = {
         "down.desc": "無須註冊、本機離線運作，安裝後立即親身體驗滑鼠晃動召喚的極致流暢感。",
         "down.btn_installer": "下載 Windows 安裝版 (v1.4.3)",
         "down.btn_portable": "免安裝綠色版 (.zip)",
+        "down.btn_msstore": "Microsoft Store (審核中)",
         "down.btn_buy": "前往購買終身序號",
         "down.f1": "相容 Windows 10 / 11 (64-bit)",
         "down.f2": "本機離線安全無後門",
@@ -151,6 +153,7 @@ const TRANSLATIONS = {
         "hero.btn_buy": "Get Perpetual License (NT$ 299 / $9.99 USD)",
         "hero.btn_installer": "Download Installer (v1.4.3)",
         "hero.btn_portable": "Portable .zip Edition",
+        "hero.btn_msstore": "Microsoft Store (In Review)",
 
         "shelf.name": "Shelf #1",
         "shelf.item1_title": "Hero_Draft_v3.png",
@@ -209,6 +212,7 @@ const TRANSLATIONS = {
         "down.desc": "No registration required. 100% offline local processing. Experience the fluid shake-to-summon gesture firsthand.",
         "down.btn_installer": "Download Windows Setup (v1.4.3)",
         "down.btn_portable": "Download Portable (.zip)",
+        "down.btn_msstore": "Microsoft Store (In Review)",
         "down.btn_buy": "Purchase Perpetual License",
         "down.f1": "Compatible with Windows 10 / 11 (64-bit)",
         "down.f2": "100% Local & Safe Without Backdoors",
@@ -321,3 +325,21 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleBtn.addEventListener('click', toggleLanguage);
     }
 });
+// Microsoft Store 上架開關：審核通過後改為 true 即可全站啟用商店下載按鈕
+const MS_STORE_LIVE = false;
+function updateMsStoreButtons(lang) {
+    const isEn = lang === 'en_US';
+    document.querySelectorAll('.ms-store-btn').forEach(btn => {
+        const url = btn.getAttribute('data-store-url');
+        const span = btn.querySelector('[data-i18n]');
+        if (MS_STORE_LIVE && url) {
+            btn.href = url;
+            btn.target = '_blank';
+            btn.rel = 'noopener noreferrer';
+            btn.classList.remove('opacity-80', 'cursor-not-allowed');
+            btn.classList.add('hover:scale-105');
+            if (span) span.textContent = isEn ? 'Get it from Microsoft' : 'Microsoft Store 下載';
+        }
+    });
+}
+document.addEventListener('DOMContentLoaded', () => updateMsStoreButtons(typeof currentLang !== 'undefined' ? currentLang : 'zh_TW'));
