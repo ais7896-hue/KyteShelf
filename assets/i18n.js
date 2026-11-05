@@ -13,6 +13,7 @@ const TRANSLATIONS = {
         "nav.guide": "操作指南",
         "nav.suite": "Kyte 全系列",
         "nav.faq": "常見問答",
+        "nav.blog": "技術專欄",
         "nav.pro": "取得正式版",
 
         "hero.badge": "專為 Windows 10 / 11 深度調校的桌面效率神器",
@@ -144,6 +145,7 @@ const TRANSLATIONS = {
         "nav.guide": "User Guide",
         "nav.suite": "Kyte Suite",
         "nav.faq": "FAQ",
+        "nav.blog": "Blog",
         "nav.pro": "Get Pro License",
 
         "hero.badge": "Engineered for Windows 10 & 11 Desktop Productivity",

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>KyteShelf Blog</title>
+    <link>https://kyteshelf.aisming.com/blog/</link>
+    <description>深入探討 Windows 10/11 桌面檔案暫存、跨視窗拖曳中繼、Dropover 替代方案與高效檔案整理工作流。</description>
+    <language>zh-tw</language>
+    <item>
+      <title>2026 Windows 最佳 Dropover 替代方案：為什麼你需要桌面懸浮暫存置物架？</title>
+      <link>https://kyteshelf.aisming.com/blog/windows-dropover-alternative-2026.html</link>
+      <guid>https://kyteshelf.aisming.com/blog/windows-dropover-alternative-2026.html</guid>
+      <pubDate>2026-11-05</pubDate>
+      <description>從 macOS 跳槽 Windows 最懷念 Dropover？本文深入解析 KyteShelf 如何透過滑鼠晃動召喚 (Shake to Summon)、多工作區分頁與空白鍵預覽，在 Windows 10/11 實現超越 Dropover 的拖放體驗。</description>
+    </item>
+    <item>
+      <title>解決 Windows 跨視窗拖曳與 Outlook 郵件附件整理的終極工作流</title>
+      <link>https://kyteshelf.aisming.com/blog/drag-and-drop-outlook-attachments-workflow.html</link>
+      <guid>https://kyteshelf.aisming.com/blog/drag-and-drop-outlook-attachments-workflow.html</guid>
+      <pubDate>2026-11-05</pubDate>
+      <description>經常需要從多封 Outlook 信件抽出附件、或將多個資料夾的報表集中附加到信件草稿嗎？了解如何透過 KyteShelf 的 COM 串流與 Outlook 直串技術省下 80% 重複操作時間。</description>
+    </item>
+  </channel>
+</rss>
