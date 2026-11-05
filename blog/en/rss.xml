@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>KyteShelf Blog (EN)</title>
+    <link>https://kyteshelf.aisming.com/blog/en/</link>
+    <description>In-depth guides on Windows 10/11 file stashing, multi-window drag-and-drop workflows, Dropover alternatives, and desktop productivity.</description>
+    <language>en-us</language>
+    <item>
+      <title>Best Dropover Alternative for Windows 10 &amp; 11 (2026): Why You Need a Floating Staging Shelf</title>
+      <link>https://kyteshelf.aisming.com/blog/en/windows-dropover-alternative-2026.html</link>
+      <guid>https://kyteshelf.aisming.com/blog/en/windows-dropover-alternative-2026.html</guid>
+      <pubDate>2026-11-05</pubDate>
+      <description>Missing macOS Dropover on Windows? Discover how KyteShelf brings Shake-to-Summon file stashing, multi-workspace tabs, one-click ZIP bundling, and Spacebar quick preview to Windows 10 and 11.</description>
+    </item>
+    <item>
+      <title>The Ultimate Windows Workflow for Dragging &amp; Organizing Outlook Email Attachments</title>
+      <link>https://kyteshelf.aisming.com/blog/en/drag-and-drop-outlook-attachments-workflow.html</link>
+      <guid>https://kyteshelf.aisming.com/blog/en/drag-and-drop-outlook-attachments-workflow.html</guid>
+      <pubDate>2026-11-05</pubDate>
+      <description>Tired of saving Outlook attachments to your desktop just to re-attach them to another email? Learn how KyteShelf&#x27;s native Windows COM &amp; OLE stream integration streamlines Outlook attachment workflows.</description>
+    </item>
+  </channel>
+</rss>

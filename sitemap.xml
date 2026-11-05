@@ -13,6 +13,12 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://kyteshelf.aisming.com/blog/en/</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://kyteshelf.aisming.com/guide.html</loc>
     <lastmod>2026-11-05</lastmod>
     <changefreq>monthly</changefreq>
@@ -32,6 +38,18 @@
   </url>
   <url>
     <loc>https://kyteshelf.aisming.com/blog/drag-and-drop-outlook-attachments-workflow.html</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://kyteshelf.aisming.com/blog/en/windows-dropover-alternative-2026.html</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://kyteshelf.aisming.com/blog/en/drag-and-drop-outlook-attachments-workflow.html</loc>
     <lastmod>2026-11-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

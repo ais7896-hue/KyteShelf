@@ -307,6 +307,12 @@ function applyLanguage(lang) {
         a.href = lang === 'en_US' ? 'guide_en.html' : 'guide.html';
     });
 
+    // 智能切換技術專欄 (Blog) 目標網址 (中: blog/ | 英: blog/en/)
+    const blogLinks = document.querySelectorAll('a[href="blog/"], a[href="blog/en/"]');
+    blogLinks.forEach(a => {
+        a.href = lang === 'en_US' ? 'blog/en/' : 'blog/';
+    });
+
     const langBtnText = document.getElementById('lang-btn-text');
     if (langBtnText) {
         langBtnText.textContent = lang === 'zh_TW' ? 'EN' : '繁中';
