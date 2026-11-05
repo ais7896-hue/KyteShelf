@@ -23,12 +23,15 @@ def _find_kyteview_launcher() -> tuple:
     if which_exe and os.path.exists(which_exe):
         return (str(which_exe), [])
 
-    # 2. 檢查常見安裝路徑 (如 LocalAppData)
+    # 2. 檢查常見安裝路徑 (如 LocalAppData / MSIX ExecutionAlias)
     local_app_data = os.environ.get("LOCALAPPDATA", "")
     if local_app_data:
         cand_installed = Path(local_app_data) / "Programs" / "KyteView" / "KyteView.exe"
         if cand_installed.exists():
             return (str(cand_installed), [])
+        cand_msix = Path(local_app_data) / "Microsoft" / "WindowsApps" / "KyteView.exe"
+        if cand_msix.exists():
+            return (str(cand_msix), [])
 
     # 3. 尋找相鄰同目錄下的 KyteView 開發專案
     shelf_root = Path(__file__).resolve().parent.parent
