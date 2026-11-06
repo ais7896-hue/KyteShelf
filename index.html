@@ -239,11 +239,11 @@
                     <i class="fa-solid fa-file-zipper text-blue-600"></i>
                     <span data-i18n="hero.btn_portable">免安裝綠色版 (.zip)</span>
                 </a>
-                <a href="javascript:void(0)" data-store-id="9P03PW7NF66K" data-store-url="https://apps.microsoft.com/detail/9P03PW7NF66K"
+                <a href="https://apps.microsoft.com/detail/9P03PW7NF66K" target="_blank" rel="noopener noreferrer" data-store-id="9P03PW7NF66K" data-store-url="https://apps.microsoft.com/detail/9P03PW7NF66K"
                     title="Microsoft Store ID: 9P03PW7NF66K"
-                    class="ms-store-btn w-full sm:w-auto px-6 py-4 bg-slate-900 text-white font-bold rounded-xl border border-slate-800 shadow-sm transition flex items-center justify-center gap-2.5 opacity-80 cursor-not-allowed">
+                    class="ms-store-btn w-full sm:w-auto px-6 py-4 bg-slate-900 text-white font-bold rounded-xl border border-slate-800 shadow-sm transition flex items-center justify-center gap-2.5 hover:scale-105 hover:border-sky-400/50">
                     <i class="fa-brands fa-microsoft text-sky-400 text-lg"></i>
-                    <span data-i18n="hero.btn_msstore">Microsoft Store (審核中)</span>
+                    <span data-i18n="hero.btn_msstore">Microsoft Store 下載</span>
                 </a>
             </div>
 
@@ -542,11 +542,11 @@
                     <i class="fa-solid fa-file-zipper text-blue-600"></i>
                     <span data-i18n="down.btn_portable">免安裝綠色版 (.zip)</span>
                 </a>
-                <a href="javascript:void(0)" data-store-id="9P03PW7NF66K" data-store-url="https://apps.microsoft.com/detail/9P03PW7NF66K"
+                <a href="https://apps.microsoft.com/detail/9P03PW7NF66K" target="_blank" rel="noopener noreferrer" data-store-id="9P03PW7NF66K" data-store-url="https://apps.microsoft.com/detail/9P03PW7NF66K"
                     title="Microsoft Store ID: 9P03PW7NF66K"
-                    class="ms-store-btn w-full sm:w-auto px-6 py-3.5 bg-slate-900 text-white font-bold rounded-xl border border-slate-800 shadow-sm transition flex items-center justify-center gap-2 opacity-80 cursor-not-allowed">
+                    class="ms-store-btn w-full sm:w-auto px-6 py-3.5 bg-slate-900 text-white font-bold rounded-xl border border-slate-800 shadow-sm transition flex items-center justify-center gap-2 hover:scale-105 hover:border-sky-400/50">
                     <i class="fa-brands fa-microsoft text-sky-400"></i>
-                    <span data-i18n="down.btn_msstore">Microsoft Store (審核中)</span>
+                    <span data-i18n="down.btn_msstore">Microsoft Store 下載</span>
                 </a>
                 <a href="#pricing"
                     class="w-full sm:w-auto px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center gap-2">
@@ -774,7 +774,7 @@
     </div>
 
     <!-- i18n 多國語言支援腳本 -->
-    <script src="assets/i18n.js?v=20261105_blog2"></script>
+    <script src="assets/i18n.js?v=20261106_msstore"></script>
     <script>
         // 綠界 ECPay 結帳彈窗互動控制 (支援單品與三合一套裝)
         const ecpayModal = document.getElementById('ecpay-modal');
@@ -835,6 +835,18 @@
                 });
                 document.querySelectorAll('a[href="blog/"], a[href="blog/en/"]').forEach(a => {
                     a.href = isEn ? 'blog/en/' : 'blog/';
+                });
+                document.querySelectorAll('.ms-store-btn').forEach(btn => {
+                    const url = btn.getAttribute('data-store-url');
+                    const span = btn.querySelector('[data-i18n]');
+                    if (url) {
+                        btn.href = url;
+                        btn.target = '_blank';
+                        btn.rel = 'noopener noreferrer';
+                        btn.classList.remove('opacity-80', 'cursor-not-allowed');
+                        btn.classList.add('hover:scale-105');
+                        if (span) span.textContent = isEn ? 'Get it from Microsoft' : 'Microsoft Store 下載';
+                    }
                 });
             }
             document.addEventListener('DOMContentLoaded', () => {
