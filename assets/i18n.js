@@ -346,7 +346,7 @@ function updateMsStoreButtons(lang) {
             btn.rel = 'noopener noreferrer';
             btn.classList.remove('opacity-80', 'cursor-not-allowed');
             btn.classList.add('hover:scale-105');
-            if (span) span.textContent = isEn ? 'Get it from Microsoft' : 'Microsoft Store 下載';
+            // Official 'Get it from Microsoft' vector badge stays unchanged across languages
         }
     });
 }
