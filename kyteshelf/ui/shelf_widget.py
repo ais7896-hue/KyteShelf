@@ -26,7 +26,10 @@ from .sticky_note import StickyNoteWindow, create_sticky_icon
 from ..i18n import t, i18n
 from ..utils import play_feedback_sound
 from ..outlook_helper import (
-    is_outlook_mime_data, extract_attachments_from_outlook_com, extract_virtual_files_from_clipboard
+    is_outlook_mime_data,
+    extract_attachments_from_outlook_com,
+    extract_virtual_files_from_mime,
+    extract_virtual_files_from_clipboard,
 )
 
 
@@ -931,11 +934,26 @@ class KyteShelfWidget(QWidget):
         mime = event.mimeData()
         has_handled = False
 
-        # 0. 優先檢查是否為 Outlook 附件或 Windows 虛擬檔案拖曳
-        if is_outlook_mime_data(mime):
+        # 1. 最優先：檢查本機實體檔案與資料夾 (CF_HDROP / Local File URLs)
+        # Windows 檔案總管拖曳本機檔案時亦會附帶 FileGroupDescriptorW，必須最優先處理實體路徑，避免誤觸剪貼簿或虛擬檔案提取
+        if mime.hasUrls():
+            local_urls = [u for u in mime.urls() if u.isLocalFile()]
+            if local_urls:
+                has_handled = True  # 只要是本機實體檔案，標記已處理，絕對不可降級為虛擬檔案或純文字便箋
+                for url in local_urls:
+                    path = os.path.normpath(url.toLocalFile())
+                    if path and path not in self.file_paths:
+                        self.add_file_item(path)
+                self.update_state()
+                if self.manager:
+                    self.manager.save_session()
+
+        # 2. 次優先：檢查是否為 Outlook 附件或無實體路徑之 Windows 虛擬檔案拖曳
+        # 注意：拖曳事件僅能從 Outlook COM 或當前拖曳的 mime 提取，絕不可讀取系統剪貼簿 (OleGetClipboard)
+        if not has_handled and is_outlook_mime_data(mime):
             saved = extract_attachments_from_outlook_com(self.temp_dir)
             if not saved:
-                saved = extract_virtual_files_from_clipboard(self.temp_dir)
+                saved = extract_virtual_files_from_mime(mime, self.temp_dir)
             if saved:
                 count = 0
                 for p in saved:
@@ -949,7 +967,7 @@ class KyteShelfWidget(QWidget):
                         self.manager.save_session()
                     self.show_temporary_hint(f"📥 已從 Outlook 加入 {count} 個附件！")
 
-        # 1. 優先處理直接攜帶圖片點陣圖的拖曳數據（如某些瀏覽器或圖形軟體）
+        # 3. 處理直接攜帶圖片點陣圖的拖曳數據（如某些瀏覽器或圖形軟體）
         if not has_handled and mime.hasImage():
             image = mime.imageData()
             if image and isinstance(image, QImage) and not image.isNull():
@@ -959,15 +977,10 @@ class KyteShelfWidget(QWidget):
                     self.add_file_item(str(img_path))
                     has_handled = True
 
-        # 2. 檢查 URLs（本機檔案 vs 網址）
+        # 4. 檢查遠端網址 URLs（HTTP / HTTPS）
         if not has_handled and mime.hasUrls():
             for url in mime.urls():
-                if url.isLocalFile():
-                    has_handled = True  # 只要是本機實體檔案，標記已處理，絕對不可降級為純文字便箋
-                    path = os.path.normpath(url.toLocalFile())
-                    if path and path not in self.file_paths:
-                        self.add_file_item(path)
-                elif url.scheme() in ["http", "https"]:
+                if url.scheme() in ["http", "https"]:
                     url_str = url.toString()
                     # 判斷是否為網頁圖片 URL，若是則自動下載為實體圖片！
                     if self._is_image_url(url_str) and self._download_and_add_remote_image(url_str):
@@ -976,20 +989,24 @@ class KyteShelfWidget(QWidget):
                         self.add_sticky_note(url_str, note_type="url")
                         has_handled = True
 
-        # 3. 檢查 HTML 是否包含 <img> 圖片標籤
+        # 5. 檢查 HTML 是否包含 <img> 圖片標籤
         if not has_handled and mime.hasHtml():
             m = re.search(r'<img[^>]+src=["\'](https?://[^"\']+)["\']', mime.html(), re.IGNORECASE)
             if m:
                 if self._download_and_add_remote_image(m.group(1)):
                     has_handled = True
 
-        # 4. 純文字降級處理
+        # 6. 純文字降級處理
         if not has_handled and mime.hasText():
             text = mime.text().strip()
             if self._is_image_url(text) and self._download_and_add_remote_image(text):
                 has_handled = True
             else:
                 self.add_sticky_note(mime.text(), note_type="text")
+                has_handled = True
+
+        if has_handled and self.manager:
+            self.manager.save_session()
 
         event.acceptProposedAction()
 
@@ -1204,7 +1221,7 @@ class KyteShelfWidget(QWidget):
 
         # 3. 核心新增：檢查是否為 Outlook 附件或 Windows 虛擬檔案（自 Outlook 附件 Ctrl+C）
         saved_outlook_files = []
-        if is_outlook_mime_data(mime) or sys.platform == "win32":
+        if is_outlook_mime_data(mime):
             saved_outlook_files = extract_virtual_files_from_clipboard(self.temp_dir)
             if not saved_outlook_files:
                 saved_outlook_files = extract_attachments_from_outlook_com(self.temp_dir)

@@ -6,6 +6,7 @@ param(
 # KyteShelf 一鍵打包與安裝程式編譯腳本 (含 Portable 綠色版)
 
 $ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
 
 Set-Location -Path $PSScriptRoot
 
@@ -66,7 +67,7 @@ Write-Host "`n[OK] PyInstaller 打包成功！綠色免安裝目錄位於 dist\K
 # 2.5 打包免安裝綠色版 (Portable Zip)
 Write-Host "`n>>> 正在打包免安裝綠色版 (Portable Zip)... " -ForegroundColor Yellow
 if (-not (Test-Path "Output")) { New-Item -ItemType Directory -Force "Output" | Out-Null }
-$appVersion = "1.4.3"
+$appVersion = "1.4.4"
 if (Test-Path "version.json") {
     try {
         $vJson = Get-Content "version.json" -Raw | ConvertFrom-Json

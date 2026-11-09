@@ -20,7 +20,7 @@ from .shelf_widget import KyteShelfWidget, DropShelfWidget
 
 
 class ShelfManager(QObject):
-    APP_VERSION = "1.4.3"
+    APP_VERSION = "1.4.4"
     REPO_NAME = "ais7896-hue/KyteShelf"
     CNAME_DOMAIN = "kyteshelf.aisming.com"
     def __init__(self, config_manager: ConfigManager = None):

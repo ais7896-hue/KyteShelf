@@ -171,6 +171,36 @@ class TestKyteShelfWidget(unittest.TestCase):
         self.shelf.retranslate_ui()
         self.assertEqual(self.shelf.get_display_name(), "置物架 #1")
 
+    def test_drop_explorer_file_does_not_grab_clipboard_file(self):
+        """驗證從 Windows 檔案總管拖曳實體檔案（同時帶有 FileGroupDescriptorW）時，只會加入拖曳的檔案，絕不誤抓 Ctrl+C 剪貼簿檔案"""
+        from unittest.mock import patch
+        from PySide6.QtCore import QMimeData, QUrl
+
+        dragged_file = self.user_dir / "內部稽核.pdf"
+        dragged_file.write_text("dragged content")
+        clipboard_file = self.user_dir / "附檔8 前次內稽查檢表.pdf"
+        clipboard_file.write_text("clipboard content")
+
+        mime = QMimeData()
+        mime.setUrls([QUrl.fromLocalFile(str(dragged_file))])
+        # 模擬 Windows Explorer IDataObject 同時帶有 FileGroupDescriptorW 與 FileContents
+        mime.setData('application/x-qt-windows-mime;value="FileGroupDescriptorW"', b"dummy_fgd")
+        mime.setData('application/x-qt-windows-mime;value="FileContents"', b"dummy_contents")
+
+        mock_event = MagicMock()
+        mock_event.source.return_value = None
+        mock_event.mimeData.return_value = mime
+
+        with patch("kyteshelf.ui.shelf_widget.extract_virtual_files_from_clipboard", return_value=[str(clipboard_file)]) as mock_clip, \
+             patch("kyteshelf.ui.shelf_widget.extract_attachments_from_outlook_com", return_value=[str(clipboard_file)]) as mock_com:
+            self.shelf.dropEvent(mock_event)
+            mock_clip.assert_not_called()
+            mock_com.assert_not_called()
+
+        self.assertEqual(len(self.shelf.file_paths), 1)
+        self.assertEqual(os.path.normpath(self.shelf.file_paths[0]), os.path.normpath(str(dragged_file)))
+        self.assertEqual(self.shelf.list_widget.item(0).text(), "內部稽核.pdf")
+
 
 if __name__ == "__main__":
     unittest.main()

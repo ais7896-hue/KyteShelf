@@ -18,10 +18,13 @@ if IS_WIN:
 
 
 def is_outlook_mime_data(mime) -> bool:
-    """判斷 QMimeData 是否包含 Outlook 或 Windows 虛擬檔案描述元格式"""
+    """判斷 QMimeData 是否包含 Outlook 或 Windows 虛擬檔案描述元格式（且非本機實體檔案）"""
     if not mime:
         return False
     try:
+        # 若已包含本機實體檔案路徑 (CF_HDROP)，代表是一般檔案總管拖曳或複製，絕非虛擬檔案
+        if mime.hasUrls() and any(u.isLocalFile() for u in mime.urls()):
+            return False
         formats = [f.lower() for f in mime.formats()]
         for fmt in formats:
             if "filegroupdescriptor" in fmt or "filecontents" in fmt or "renprivate" in fmt:
@@ -110,6 +113,71 @@ def extract_attachments_from_outlook_com(target_dir: Path) -> List[str]:
     return saved_files
 
 
+def extract_virtual_files_from_mime(mime, target_dir: Path) -> List[str]:
+    """
+    從拖放事件的 QMimeData 直接提取 FileGroupDescriptor 與 FileContents 虛擬檔案。
+    專供 dropEvent 使用，絕不讀取系統剪貼簿 (OleGetClipboard)，避免誤抓 Ctrl+C 複製的檔案。
+    """
+    if not mime:
+        return []
+
+    saved_files: List[str] = []
+    try:
+        formats = list(mime.formats())
+        fgd_fmt = None
+        is_unicode = True
+        contents_fmt = None
+
+        for fmt in formats:
+            low = fmt.lower()
+            if "filegroupdescriptorw" in low:
+                fgd_fmt = fmt
+                is_unicode = True
+            elif "filegroupdescriptor" in low and not fgd_fmt:
+                fgd_fmt = fmt
+                is_unicode = False
+            elif "filecontents" in low and not contents_fmt:
+                contents_fmt = fmt
+
+        if not fgd_fmt or not contents_fmt:
+            return []
+
+        raw_qba = mime.data(fgd_fmt)
+        data = bytes(raw_qba) if raw_qba else b""
+        if len(data) < 4:
+            return []
+
+        num_files = struct.unpack_from("<I", data, 0)[0]
+        fd_size = 592 if is_unicode else 332
+
+        content_qba = mime.data(contents_fmt)
+        content_bytes = bytes(content_qba) if content_qba else b""
+        if not content_bytes:
+            return []
+
+        if num_files >= 1 and len(data) >= 4 + fd_size:
+            fd_bytes = data[4 : 4 + fd_size]
+            if is_unicode:
+                name_raw = fd_bytes[72:592]
+                filename = name_raw.decode("utf-16le", errors="ignore").split("\x00", 1)[0]
+            else:
+                name_raw = fd_bytes[72:332]
+                filename = name_raw.decode("mbcs", errors="ignore").split("\x00", 1)[0]
+
+            filename = os.path.basename(filename.strip())
+            if not filename:
+                filename = "dropped_attachment.dat"
+
+            dest_path = get_unique_temp_filepath(target_dir, filename)
+            with open(dest_path, "wb") as f:
+                f.write(content_bytes)
+            saved_files.append(str(dest_path))
+    except Exception:
+        pass
+
+    return saved_files
+
+
 def extract_virtual_files_from_clipboard(target_dir: Path) -> List[str]:
     """
     從 Windows 剪貼簿 OLE IDataObject 提取 FileGroupDescriptor 與 FileContents 虛擬二進位資料。
@@ -134,6 +202,7 @@ def extract_virtual_files_from_clipboard(target_dir: Path) -> List[str]:
 
     try:
         user32 = ctypes.windll.user32
+        cf_hdrop = 15  # CF_HDROP
         cf_fgd_w = user32.RegisterClipboardFormatW("FileGroupDescriptorW")
         cf_fgd_a = user32.RegisterClipboardFormatW("FileGroupDescriptor")
         cf_contents = user32.RegisterClipboardFormatW("FileContents")
@@ -142,14 +211,15 @@ def extract_virtual_files_from_clipboard(target_dir: Path) -> List[str]:
         is_unicode = True
         for fmt_info in pData.EnumFormatEtc(1):
             cf = fmt_info[0]
+            # 若剪貼簿內已有實體檔案 CF_HDROP，代表是一般檔案總管 Ctrl+C，不應當作虛擬檔案提取
+            if cf == cf_hdrop:
+                return []
             if cf == cf_fgd_w:
                 fgd_format = cf
                 is_unicode = True
-                break
-            elif cf == cf_fgd_a:
+            elif cf == cf_fgd_a and not fgd_format:
                 fgd_format = cf
                 is_unicode = False
-                break
 
         if not fgd_format:
             return []

@@ -6,7 +6,7 @@ const TRANSLATIONS = {
     zh_TW: {
         "page.title": "KyteShelf - 專為 Windows 打造的桌面懸浮拖曳暫存置物架 | Dropover 最佳替代方案",
         "top.badge": "NEW",
-        "top.announcement": "KyteShelf v1.4.3 正式發行！KyteView 跨進程預覽連動與全新偏好設定",
+        "top.announcement": "KyteShelf v1.4.4 正式發行！KyteView 跨進程預覽連動與拖曳穩定性強化",
 
         "nav.features": "核心功能",
         "nav.workflow": "操作流程",
@@ -21,7 +21,7 @@ const TRANSLATIONS = {
         "hero.title_post": "工作流不再手忙腳亂",
         "hero.desc": "不再需要為了搬移檔案把螢幕切得密密麻麻。按住檔案輕晃滑鼠，專屬置物架立即浮現於手邊；中繼收集各處文件，隨放隨走，解放你的雙手。",
         "hero.btn_buy": "取得終身買斷版 (NT$ 299 / $9.99 USD)",
-        "hero.btn_installer": "下載安裝版 (v1.4.3)",
+        "hero.btn_installer": "下載安裝版 (v1.4.4)",
         "hero.btn_portable": "免安裝綠色版 (.zip)",
         "hero.btn_msstore": "Microsoft Store 下載",
 
@@ -80,7 +80,7 @@ const TRANSLATIONS = {
 
         "down.title": "立即免費下載試用",
         "down.desc": "無須註冊、本機離線運作，安裝後立即親身體驗滑鼠晃動召喚的極致流暢感。",
-        "down.btn_installer": "下載 Windows 安裝版 (v1.4.3)",
+        "down.btn_installer": "下載 Windows 安裝版 (v1.4.4)",
         "down.btn_portable": "免安裝綠色版 (.zip)",
         "down.btn_msstore": "Microsoft Store 下載",
         "down.btn_buy": "前往購買終身序號",
@@ -138,7 +138,7 @@ const TRANSLATIONS = {
     en_US: {
         "page.title": "KyteShelf - The Next-Gen Floating Drag & Drop Staging Shelf for Windows | Best Dropover Alternative",
         "top.badge": "NEW",
-        "top.announcement": "KyteShelf v1.4.3 Released! KyteView IPC preview integration & enhanced settings.",
+        "top.announcement": "KyteShelf v1.4.4 Released! KyteView IPC preview integration & drag-and-drop fixes.",
 
         "nav.features": "Features",
         "nav.workflow": "Workflow",
@@ -153,7 +153,7 @@ const TRANSLATIONS = {
         "hero.title_post": "Effortless Desktop Flow",
         "hero.desc": "Never clutter your monitor with side-by-side Explorer windows again. Hold any file, shake your cursor, and your dedicated staging shelf pops up instantly right beside your hand. Stash, collect, and drop freely.",
         "hero.btn_buy": "Get Perpetual License (NT$ 299 / $9.99 USD)",
-        "hero.btn_installer": "Download Installer (v1.4.3)",
+        "hero.btn_installer": "Download Installer (v1.4.4)",
         "hero.btn_portable": "Portable .zip Edition",
         "hero.btn_msstore": "Get it from Microsoft",
 
@@ -212,7 +212,7 @@ const TRANSLATIONS = {
 
         "down.title": "Download Free Trial Now",
         "down.desc": "No registration required. 100% offline local processing. Experience the fluid shake-to-summon gesture firsthand.",
-        "down.btn_installer": "Download Windows Setup (v1.4.3)",
+        "down.btn_installer": "Download Windows Setup (v1.4.4)",
         "down.btn_portable": "Download Portable (.zip)",
         "down.btn_msstore": "Get it from Microsoft",
         "down.btn_buy": "Purchase Perpetual License",

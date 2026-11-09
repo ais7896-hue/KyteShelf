@@ -4,6 +4,16 @@
 
 ---
 
+## [v1.4.4] - 2026-11-09
+
+### 🐛 問題修復與穩定性強化
+- **修復檔案總管拖曳檔案時誤抓 `Ctrl+C` 剪貼簿檔案的問題**：
+  - 調整 `dropEvent` 判斷優先順序，確保本機實體檔案與資料夾 (`url.isLocalFile()`) 最優先入架並即時儲存工作階段 (`session.json`)。
+  - 修正 `is_outlook_mime_data` 與 `extract_virtual_files_from_clipboard` 判定邏輯，排除帶有 `CF_HDROP` 本機實體路徑的檔案總管項目。
+  - 新增 `extract_virtual_files_from_mime` 專供拖放事件直接從 `QMimeData` 提取虛擬檔案，徹底與系統剪貼簿 (`OleGetClipboard`) 解耦。
+
+---
+
 ## [v1.4.3] - 2026-10-08
 
 ### ✨ 新增功能與生態系連動
