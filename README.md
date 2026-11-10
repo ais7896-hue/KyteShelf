@@ -66,21 +66,31 @@ python main.py
 
 ```text
 KyteShelf/
-├── main.py              # 主程式進入點
-├── kyteshelf/           # 核心模組套件
-│   ├── utils.py         # 跨平臺資源載入與相容性工具
-│   ├── config.py        # 設定檔管理器 (ConfigManager)
-│   ├── input_monitor.py # 全域滑鼠晃動與鍵盤熱鍵監聽
-│   ├── session.py       # 工作階段管理員 (SessionManager)
-│   └── ui/              # 使用者介面模組
-│       ├── hotkey_dialog.py # 熱鍵錄製與偏好設定面板
-│       ├── shelf_list.py    # 置物架檔案清單與右鍵動作
-│       ├── shelf_widget.py  # 浮動置物架主視窗
-│       ├── shelf_manager.py # 托盤管理員與資料夾監控
-│       └── sticky_note.py   # 自黏便箋視窗
-├── icon.ico             # 應用程式圖示
-├── config.json          # 本機偏好設定
-└── setup.iss            # Inno Setup 打包腳本
+├── main.py                      # 主程式進入點與單一實例守護
+├── kyteshelf/                   # 核心模組套件
+│   ├── config.py                # 設定檔管理器 (ConfigManager)
+│   ├── session.py               # 工作階段與多置物架狀態持久化 (SessionManager)
+│   ├── input_monitor.py         # 全域滑鼠晃動偵測與鍵盤熱鍵監聽
+│   ├── kyte_ipc.py              # KyteView Named Pipe 跨進程預覽連動
+│   ├── outlook_helper.py        # Outlook COM 附件自動掛載輔助器
+│   ├── license.py               # 授權驗證管理
+│   ├── updater.py               # 版本檢查與自動更新
+│   ├── utils.py                 # 跨平臺資源載入與相容性工具
+│   ├── i18n/                    # 多國語系字典 (zh_TW / en_US)
+│   └── ui/                      # 使用者介面模組
+│       ├── shelf_manager.py     # 系統托盤管理員、多置物架調度與資料夾監控
+│       ├── shelf_widget.py      # 浮動置物架主視窗
+│       ├── shelf_list.py        # 置物架檔案清單、拖放處理與右鍵動作
+│       ├── image_preview.py     # 圖片懸停高畫質縮圖預覽卡片
+│       ├── sticky_note.py       # 智慧自黏便箋編輯視窗
+│       ├── hotkey_dialog.py     # 熱鍵錄製與偏好設定面板
+│       └── license_dialog.py    # 授權註冊對話框
+├── tests/                       # 單元測試與整合測試套件
+├── msix/                        # Microsoft Store MSIX 封裝清單與資產
+├── scoop/ & winget/             # 套件管理器發布清單
+├── icon.ico                     # 應用程式圖示
+├── KyteShelf.spec               # PyInstaller 打包設定檔
+└── setup.iss                    # Inno Setup 安裝精靈腳本
 ```
 
 ---
