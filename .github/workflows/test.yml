@@ -3,8 +3,24 @@ name: Automated Tests
 on:
   push:
     branches: [ main, master ]
+    paths-ignore:
+      - '**.md'
+      - '**.html'
+      - 'blog/**'
+      - 'sitemap.xml'
+      - 'robots.txt'
+      - 'CNAME'
+      - '.nojekyll'
   pull_request:
     branches: [ main, master ]
+    paths-ignore:
+      - '**.md'
+      - '**.html'
+      - 'blog/**'
+      - 'sitemap.xml'
+      - 'robots.txt'
+      - 'CNAME'
+      - '.nojekyll'
 
 jobs:
   test:
