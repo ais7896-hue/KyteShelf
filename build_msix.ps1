@@ -10,7 +10,7 @@ $ProgressPreference = "SilentlyContinue"
 Set-Location -Path $PSScriptRoot
 
 $appName = "KyteShelf"
-$appVersion = "1.4.4"
+$appVersion = "1.4.5"
 if (Test-Path "version.json") {
     try {
         $vJson = Get-Content "version.json" -Raw -Encoding UTF8 | ConvertFrom-Json

@@ -1,4 +1,4 @@
-param(
+﻿param(
     [switch]$SkipTests
 )
 
@@ -67,10 +67,10 @@ Write-Host "`n[OK] PyInstaller 打包成功！綠色免安裝目錄位於 dist\K
 # 2.5 打包免安裝綠色版 (Portable Zip)
 Write-Host "`n>>> 正在打包免安裝綠色版 (Portable Zip)... " -ForegroundColor Yellow
 if (-not (Test-Path "Output")) { New-Item -ItemType Directory -Force "Output" | Out-Null }
-$appVersion = "1.4.4"
+$appVersion = "1.4.5"
 if (Test-Path "version.json") {
     try {
-        $vJson = Get-Content "version.json" -Raw | ConvertFrom-Json
+        $vJson = Get-Content "version.json" -Raw -Encoding UTF8 | ConvertFrom-Json
         if ($vJson.version) { $appVersion = $vJson.version }
     } catch {}
 } elseif (Test-Path "setup.iss") {
@@ -90,6 +90,7 @@ Write-Host " [SUCCESS] 綠色免安裝包已產出：$portableZip " -ForegroundC
 # 3. Inno Setup 封裝
 Write-Host "`n>>> [3/3] 正在使用 Inno Setup 封裝安裝精靈... " -ForegroundColor Yellow
 $isccCandidates = @(
+    "C:\Users\ais78\AppData\Local\Programs\Antigravity IDE\resources\app\node_modules\innosetup\bin\ISCC.exe",
     "C:\Program Files\Inno Setup 7\ISCC.exe",
     "C:\Program Files (x86)\Inno Setup 7\ISCC.exe",
     "C:\Program Files\Inno Setup 6\ISCC.exe",

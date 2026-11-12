@@ -1,10 +1,10 @@
 {
   "app_name": "KyteShelf",
-  "version": "1.4.4",
-  "release_date": "2026-11-09",
+  "version": "1.4.5",
+  "release_date": "2026-11-12",
   "min_supported_version": "1.0.0",
   "mandatory": false,
-  "notes": "1. [拖曳修復] 修正從檔案總管拖曳本機檔案時，因 FileGroupDescriptorW 重疊而誤抓 Ctrl+C 剪貼簿檔案的問題\n2. [虛擬檔案隔離] 拖放事件改由 QMimeData 獨立提取虛擬檔案，徹底與系統剪貼簿解耦\n3. [穩定性強化] 拖放本機檔案後即時持久化儲存工作階段 (session.json)",
-  "notes_en": "1. [Drag & Drop Fix] Fixed an issue where dragging local files from File Explorer could mistakenly grab Ctrl+C clipboard files\n2. [Virtual File Isolation] Decoupled drag-and-drop virtual file extraction from the system clipboard\n3. [Reliability] Immediately persist session state after dropping local files",
-  "download_url": "https://github.com/ais7896-hue/KyteShelf/releases/download/v1.4.4/KyteShelf_Setup_v1.4.4.exe"
+  "notes": "1. [修復與穩定性] 修復從網頁瀏覽器拖曳圖片時因 OLE 虛擬檔案誤判與剪貼簿衝突導致當掉的問題\n2. [非同步載入] 網頁遠端圖片全面採用背景非同步執行緒下載，UI 主執行緒零卡頓零凍結\n3. [圖片支援] 支援 Base64 Data URL 圖片解析解碼入架，支援多種圖片二進位點陣圖格式",
+  "notes_en": "1. [Fix & Stability] Fixed freeze/crash when dragging images from web browsers due to OLE descriptor collision and clipboard lock\n2. [Async Download] Asynchronous background downloading for remote web images, completely non-blocking UI\n3. [Image Support] Added Base64 Data URL decoding support and native binary image drop handling",
+  "download_url": "https://github.com/ais7896-hue/KyteShelf/releases/download/v1.4.5/KyteShelf_Setup_v1.4.5.exe"
 }

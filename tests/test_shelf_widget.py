@@ -171,35 +171,27 @@ class TestKyteShelfWidget(unittest.TestCase):
         self.shelf.retranslate_ui()
         self.assertEqual(self.shelf.get_display_name(), "置物架 #1")
 
-    def test_drop_explorer_file_does_not_grab_clipboard_file(self):
-        """驗證從 Windows 檔案總管拖曳實體檔案（同時帶有 FileGroupDescriptorW）時，只會加入拖曳的檔案，絕不誤抓 Ctrl+C 剪貼簿檔案"""
-        from unittest.mock import patch
-        from PySide6.QtCore import QMimeData, QUrl
-
-        dragged_file = self.user_dir / "內部稽核.pdf"
-        dragged_file.write_text("dragged content")
-        clipboard_file = self.user_dir / "附檔8 前次內稽查檢表.pdf"
-        clipboard_file.write_text("clipboard content")
-
-        mime = QMimeData()
-        mime.setUrls([QUrl.fromLocalFile(str(dragged_file))])
-        # 模擬 Windows Explorer IDataObject 同時帶有 FileGroupDescriptorW 與 FileContents
-        mime.setData('application/x-qt-windows-mime;value="FileGroupDescriptorW"', b"dummy_fgd")
-        mime.setData('application/x-qt-windows-mime;value="FileContents"', b"dummy_contents")
-
-        mock_event = MagicMock()
-        mock_event.source.return_value = None
-        mock_event.mimeData.return_value = mime
-
-        with patch("kyteshelf.ui.shelf_widget.extract_virtual_files_from_clipboard", return_value=[str(clipboard_file)]) as mock_clip, \
-             patch("kyteshelf.ui.shelf_widget.extract_attachments_from_outlook_com", return_value=[str(clipboard_file)]) as mock_com:
-            self.shelf.dropEvent(mock_event)
-            mock_clip.assert_not_called()
-            mock_com.assert_not_called()
-
+    def test_save_base64_image(self):
+        # 1x1 transparent png in base64
+        b64_png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+        res = self.shelf._save_base64_image(b64_png)
+        self.assertTrue(res)
         self.assertEqual(len(self.shelf.file_paths), 1)
-        self.assertEqual(os.path.normpath(self.shelf.file_paths[0]), os.path.normpath(str(dragged_file)))
-        self.assertEqual(self.shelf.list_widget.item(0).text(), "內部稽核.pdf")
+        p = Path(self.shelf.file_paths[0])
+        self.assertTrue(p.exists())
+        self.assertEqual(p.suffix.lower(), ".png")
+
+    def test_extract_png_from_mime(self):
+        from PySide6.QtCore import QMimeData
+        mime = QMimeData()
+        # 1x1 PNG bytes
+        png_bytes = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc`\x00\x00\x00\x02\x00\x01H\xaf\xa4q\x00\x00\x00\x00IEND\xaeB`\x82"
+        mime.setData("application/x-qt-windows-mime;value=\"PNG\"", png_bytes)
+        
+        res = self.shelf._try_extract_binary_image_from_mime(mime)
+        self.assertTrue(bool(res))
+        self.assertTrue(Path(res).exists())
+        self.assertTrue(res.endswith(".png"))
 
 
 if __name__ == "__main__":

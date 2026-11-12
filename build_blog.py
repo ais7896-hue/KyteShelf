@@ -18,7 +18,7 @@ SITE_CONFIG = {
     "og_image": "icon.ico",
     "blog_desc": "深入探討 Windows 10/11 桌面檔案暫存、跨視窗拖曳中繼、Dropover 替代方案與高效檔案整理工作流。",
     "blog_desc_en": "In-depth guides on Windows 10/11 file stashing, multi-window drag-and-drop workflows, Dropover alternatives, and desktop productivity.",
-    "cta_url": "https://github.com/ais7896-hue/KyteShelf/releases/download/v1.4.4/KyteShelf_Setup_v1.4.4.exe",
+    "cta_url": "https://github.com/ais7896-hue/KyteShelf/releases/download/v1.4.5/KyteShelf_Setup_v1.4.5.exe",
     "cta_desc": "專為 Windows 10/11 打造的桌面懸浮拖曳暫存置物架，抓住檔案輕晃滑鼠即刻召喚，支援 ZIP 一鍵打包與 Outlook 附件直串。",
     "cta_desc_en": "The floating drag-and-drop staging shelf built for Windows 10/11. Shake your mouse cursor to summon, bundle ZIP archives in one click, and attach straight to Outlook."
 }

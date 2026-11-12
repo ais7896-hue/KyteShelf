@@ -34,6 +34,20 @@ def is_outlook_mime_data(mime) -> bool:
     return False
 
 
+def is_browser_mime_data(mime) -> bool:
+    """判斷 QMimeData 是否來自瀏覽器拖曳（包含 Chromium / WebKit / Firefox 等標識）"""
+    if not mime:
+        return False
+    try:
+        formats = [f.lower() for f in mime.formats()]
+        for fmt in formats:
+            if any(k in fmt for k in ["chromium", "firefox", "webkit", "text/html"]):
+                return True
+    except Exception:
+        pass
+    return False
+
+
 def get_unique_temp_filepath(directory: Path, original_filename: str) -> Path:
     """確保檔案名稱在目錄中不重複，若已存在則自動附加序號"""
     clean_name = os.path.basename(original_filename.strip())

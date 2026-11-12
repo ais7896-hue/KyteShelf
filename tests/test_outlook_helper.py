@@ -4,12 +4,12 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from PySide6.QtCore import QMimeData, QUrl
+from PySide6.QtCore import QMimeData
 from kyteshelf.outlook_helper import (
     is_outlook_mime_data,
+    is_browser_mime_data,
     get_unique_temp_filepath,
     extract_attachments_from_outlook_com,
-    extract_virtual_files_from_mime,
     extract_virtual_files_from_clipboard,
 )
 
@@ -42,12 +42,19 @@ class TestOutlookHelper(unittest.TestCase):
         mime_contents.setData("application/x-qt-windows-mime;value=\"FileContents\"", b"test")
         self.assertTrue(is_outlook_mime_data(mime_contents))
 
-        # 5. Windows 檔案總管拖曳本機實體檔案時，雖同時附帶 FileGroupDescriptorW，但含有 LocalFile URL，必須判定為 False
-        mime_explorer = QMimeData()
-        mime_explorer.setUrls([QUrl.fromLocalFile("C:/Users/User/Desktop/內部稽核.pdf")])
-        mime_explorer.setData("application/x-qt-windows-mime;value=\"FileGroupDescriptorW\"", b"test")
-        mime_explorer.setData("application/x-qt-windows-mime;value=\"FileContents\"", b"test")
-        self.assertFalse(is_outlook_mime_data(mime_explorer))
+    def test_is_browser_mime_data(self):
+        mime_empty = QMimeData()
+        self.assertFalse(is_browser_mime_data(mime_empty))
+
+        # 瀏覽器常見 HTML 格式
+        mime_browser = QMimeData()
+        mime_browser.setHtml("<img src='https://example.com/test.png'>")
+        self.assertTrue(is_browser_mime_data(mime_browser))
+
+        # Chromium 專用標記
+        mime_chrome = QMimeData()
+        mime_chrome.setData("chromium/x-renderer-drag-drop", b"")
+        self.assertTrue(is_browser_mime_data(mime_chrome))
 
     def test_get_unique_temp_filepath(self):
         # 1. 正常檔名

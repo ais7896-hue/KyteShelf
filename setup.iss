@@ -3,7 +3,7 @@
 ; ==========================================
 
 #define MyAppName "KyteShelf"
-#define MyAppVersion "1.4.4"
+#define MyAppVersion "1.4.5"
 #define MyAppPublisher "ais7896-hue"
 #define MyAppURL "https://github.com/ais7896-hue/KyteShelf"
 #define MyAppExeName "KyteShelf.exe"
@@ -48,23 +48,15 @@ CloseApplications=yes
 CloseApplicationsFilter=*.exe
 
 [Languages]
-Name: "chinesetrad"; MessagesFile: "compiler:Languages\ChineseTraditional.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [CustomMessages]
-chinesetrad.CreateDesktopIcon=建立桌面捷徑
-chinesetrad.AdditionalIcons=額外捷徑:
-chinesetrad.AutoStart=開機時自動啟動置物架（常駐系統匣）
-chinesetrad.AutoStartGroup=啟動設定:
-chinesetrad.UninstallApp=解除安裝 {#MyAppName}
-chinesetrad.LaunchApp=立即啟動 {#MyAppName}
-
-english.CreateDesktopIcon=Create a &desktop shortcut
-english.AdditionalIcons=Additional icons:
-english.AutoStart=Launch KyteShelf on Windows startup (System Tray)
-english.AutoStartGroup=Startup options:
-english.UninstallApp=Uninstall {#MyAppName}
-english.LaunchApp=Launch {#MyAppName}
+english.CreateDesktopIcon=建立桌面捷徑 (Create desktop shortcut)
+english.AdditionalIcons=額外捷徑 (Additional icons):
+english.AutoStart=開機時自動啟動置物架 (常駐系統匣)
+english.AutoStartGroup=啟動設定 (Startup options):
+english.UninstallApp=解除安裝 {#MyAppName}
+english.LaunchApp=立即啟動 {#MyAppName}
 
 ; ==========================================
 ; 安裝自訂選項

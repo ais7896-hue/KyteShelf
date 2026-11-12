@@ -1,11 +1,16 @@
 import os
 import re
+import ssl
 import html
 import time
+import struct
 import zipfile
 import tempfile
 import subprocess
 import urllib.request
+import urllib.parse
+import base64
+import threading
 from pathlib import Path
 
 from PySide6.QtCore import (
@@ -26,10 +31,7 @@ from .sticky_note import StickyNoteWindow, create_sticky_icon
 from ..i18n import t, i18n
 from ..utils import play_feedback_sound
 from ..outlook_helper import (
-    is_outlook_mime_data,
-    extract_attachments_from_outlook_com,
-    extract_virtual_files_from_mime,
-    extract_virtual_files_from_clipboard,
+    is_outlook_mime_data, is_browser_mime_data, extract_attachments_from_outlook_com, extract_virtual_files_from_clipboard
 )
 
 
@@ -867,60 +869,442 @@ class KyteShelfWidget(QWidget):
         if event.source() == self.list_widget or event.source() == self or self.is_dragging_out:
             event.ignore()
             return
-
-        mime = event.mimeData()
-        if mime.hasUrls() or mime.hasText() or mime.hasImage() or is_outlook_mime_data(mime):
-            event.acceptProposedAction()
-            self._apply_container_style(is_drag_hover=True)
-        else:
-            event.ignore()
+        event.acceptProposedAction()
+        self._apply_container_style(is_drag_hover=True)
 
     def dragMoveEvent(self, event):
+        # 高頻觸發事件（每秒上百次）：嚴禁在此處呼叫 mime.formats() 或任何 COM RPC 查詢，防止主執行緒死鎖卡死
         if event.source() == self.list_widget or event.source() == self or self.is_dragging_out:
             event.ignore()
             return
-
-        mime = event.mimeData()
-        if mime.hasUrls() or mime.hasText() or mime.hasImage() or is_outlook_mime_data(mime):
-            event.acceptProposedAction()
-        else:
-            event.ignore()
+        event.acceptProposedAction()
 
     def dragLeaveEvent(self, event):
         self._apply_container_style(is_drag_hover=False)
 
     def _is_image_url(self, url_str: str) -> bool:
-        """判定 URL 是否為常見圖片檔案格式"""
-        try:
-            path = QUrl(url_str).path().lower()
-            image_exts = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".svg")
-            return any(path.endswith(ext) for ext in image_exts)
-        except Exception:
+        """判定 URL 是否為常見圖片檔案格式或圖片託管 CDN"""
+        if not url_str or not isinstance(url_str, str):
             return False
-
-    def _download_and_add_remote_image(self, url_str: str) -> bool:
-        """嘗試下載遠端網頁圖片，自動保存為本機實體圖片檔並入架"""
+        clean_url = url_str.strip()
+        if clean_url.startswith("data:image/"):
+            return True
         try:
-            req = urllib.request.Request(
-                url_str,
-                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+            parsed = urllib.parse.urlparse(clean_url)
+            if parsed.scheme not in ("http", "https"):
+                return False
+            path = parsed.path.lower()
+            image_exts = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".svg", ".ico", ".jfif", ".avif")
+            if any(path.endswith(ext) for ext in image_exts):
+                return True
+            query = parsed.query.lower()
+            if any(ext.lstrip(".") in query for ext in image_exts):
+                return True
+            netloc = parsed.netloc.lower()
+            cdn_patterns = (
+                "images.unsplash.com",
+                "gstatic.com",
+                "pbs.twimg.com",
+                "i.imgur.com",
+                "i.redd.it",
+                "media.discordapp.net",
+                "cdn.discordapp.com",
+                "res.cloudinary.com",
+                "image.",
+                "img.",
+                "photo.",
+                "staticflickr.com",
             )
-            with urllib.request.urlopen(req, timeout=3.5) as resp:
-                data = resp.read()
-                img = QImage()
-                if img.loadFromData(data):
+            if any(cp in netloc for cp in cdn_patterns):
+                return True
+            if any(seg in path for seg in ["/image", "/img", "/photo", "/picture", "/avatar"]):
+                return True
+        except Exception:
+            pass
+        return False
+
+    def _save_base64_image(self, data_url: str) -> bool:
+        """解析並儲存 data:image/...;base64,... 圖片至暫存檔並加入置物架"""
+        try:
+            m = re.match(r'^data:image/([a-zA-Z0-9\+\-]+);base64,(.+)$', data_url.strip(), re.DOTALL)
+            if not m:
+                return False
+            ext = m.group(1).lower()
+            if ext == "jpeg":
+                ext = "jpg"
+            elif ext == "svg+xml":
+                ext = "svg"
+            b64_str = m.group(2).strip()
+            img_bytes = base64.b64decode(b64_str)
+            if not img_bytes:
+                return False
+            ts = int(time.time() * 1000)
+            img_path = self.temp_dir / f"web_image_{ts}.{ext}"
+            with open(img_path, "wb") as f:
+                f.write(img_bytes)
+            if self.add_file_item(str(img_path)):
+                self.update_state()
+                if self.manager:
+                    self.manager.save_session()
+                self.show_temporary_hint("📥 圖片已成功加入置物架！")
+                return True
+        except Exception:
+            pass
+        return False
+
+    def _dib_to_qimage(self, dib_bytes: bytes) -> QImage:
+        """將 Windows DeviceIndependentBitmap (DIB) 轉換為 QImage"""
+        if not dib_bytes or len(dib_bytes) < 40:
+            return QImage()
+        try:
+            bi_size = struct.unpack_from("<I", dib_bytes, 0)[0]
+            bi_bit_count = struct.unpack_from("<H", dib_bytes, 14)[0]
+            bi_clr_used = struct.unpack_from("<I", dib_bytes, 32)[0]
+            offset = 14 + bi_size
+            if bi_clr_used > 0:
+                offset += bi_clr_used * 4
+            elif bi_bit_count <= 8:
+                offset += (1 << bi_bit_count) * 4
+            elif bi_size >= 40:
+                bi_compression = struct.unpack_from("<I", dib_bytes, 16)[0]
+                if bi_compression == 3:  # BI_BITFIELDS
+                    offset += 12
+            total_size = 14 + len(dib_bytes)
+            file_header = struct.pack("<2sIHHI", b"BM", total_size, 0, 0, offset)
+            img = QImage()
+            if img.loadFromData(file_header + dib_bytes, "BMP"):
+                return img
+        except Exception:
+            pass
+        return QImage()
+
+    def _try_extract_binary_image_from_mime(self, mime) -> str:
+        """
+        嘗試從 QMimeData 原生拖放格式中直接提取本機二進位點陣圖（免聯網、支援 Blob/防盜鏈）
+        支援 Chromium / Edge / Firefox 拖曳的 FileContents, DIB, PNG, JFIF, QImage 等
+        """
+        ts = int(time.time() * 1000)
+
+        # 1. 檢查直接點陣圖 (QImage / QPixmap)
+        if mime.hasImage():
+            try:
+                img_data = mime.imageData()
+                img = None
+                if isinstance(img_data, QImage) and not img_data.isNull():
+                    img = img_data
+                elif isinstance(img_data, QPixmap) and not img_data.isNull():
+                    img = img_data.toImage()
+                elif img_data is not None and hasattr(img_data, "canConvert") and img_data.canConvert(QImage):
+                    img = img_data.value()
+
+                if img and not img.isNull():
+                    img_path = self.temp_dir / f"drop_image_{ts}.png"
+                    if img.save(str(img_path), "PNG"):
+                        return str(img_path)
+            except Exception:
+                pass
+
+        # 2. 遍歷 formats 搜尋 Windows 原生格式
+        try:
+            formats = mime.formats()
+        except Exception:
+            formats = []
+
+        # 3. 核心支援：Chromium / Edge 原生拖放 FileGroupDescriptorW + FileContents
+        # 當從瀏覽器拖曳網頁圖片時，Windows Chromium 會將圖片實體以 OLE 虛擬檔案提供
+        fc_fmt = next((f for f in formats if "filecontents" in f.lower()), None)
+        if fc_fmt:
+            try:
+                fc_bytes = bytes(mime.data(fc_fmt))
+                if fc_bytes and len(fc_bytes) > 0:
+                    filename = ""
+                    fgd_fmt = next((f for f in formats if "filegroupdescriptor" in f.lower()), None)
+                    if fgd_fmt:
+                        try:
+                            fgd_bytes = bytes(mime.data(fgd_fmt))
+                            if len(fgd_bytes) >= 76:
+                                is_unicode = "w" in fgd_fmt.lower()
+                                if is_unicode:
+                                    raw_name = fgd_bytes[76:596]
+                                    filename = raw_name.decode("utf-16le", errors="ignore").split("\x00", 1)[0]
+                                else:
+                                    raw_name = fgd_bytes[76:336]
+                                    filename = raw_name.decode("mbcs", errors="ignore").split("\x00", 1)[0]
+                                filename = os.path.basename(filename.strip())
+                        except Exception:
+                            filename = ""
+
+                    ext = ""
+                    if filename:
+                        suffix = Path(filename).suffix.lower()
+                        if suffix in [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".svg", ".ico", ".jfif", ".avif"]:
+                            ext = suffix
+                    if not ext:
+                        if fc_bytes.startswith(b"\x89PNG"):
+                            ext = ".png"
+                        elif fc_bytes.startswith(b"\xff\xd8"):
+                            ext = ".jpg"
+                        elif fc_bytes.startswith(b"GIF8"):
+                            ext = ".gif"
+                        elif b"WEBP" in fc_bytes[:16]:
+                            ext = ".webp"
+                        elif fc_bytes.startswith(b"BM"):
+                            ext = ".bmp"
+                        elif fc_bytes.lstrip().startswith(b"<svg") or fc_bytes.lstrip().startswith(b"<?xml"):
+                            ext = ".svg"
+                        elif fc_bytes.startswith(b"\x00\x00\x01\x00"):
+                            ext = ".ico"
+
+                    is_valid_image = bool(ext)
+                    if not is_valid_image:
+                        test_img = QImage()
+                        if test_img.loadFromData(fc_bytes):
+                            ext = ".png"
+                            is_valid_image = True
+
+                    if is_valid_image:
+                        target_name = filename if (filename and Path(filename).suffix.lower() == ext) else f"drop_image_{ts}{ext}"
+                        from ..outlook_helper import get_unique_temp_filepath
+                        dest_path = get_unique_temp_filepath(self.temp_dir, target_name)
+                        with open(dest_path, "wb") as f:
+                            f.write(fc_bytes)
+                        if dest_path.exists() and dest_path.stat().st_size > 0:
+                            return str(dest_path)
+            except Exception:
+                pass
+
+        # 4. 優先搜尋 PNG
+        for fmt in formats:
+            if "png" in fmt.lower() and "file" not in fmt.lower():
+                try:
+                    data = bytes(mime.data(fmt))
+                    if data.startswith(b"\x89PNG"):
+                        img_path = self.temp_dir / f"drop_image_{ts}.png"
+                        with open(img_path, "wb") as f:
+                            f.write(data)
+                        return str(img_path)
+                except Exception:
+                    pass
+
+        # 5. 搜尋 JPEG / JFIF
+        for fmt in formats:
+            fl = fmt.lower()
+            if ("jfif" in fl or "jpeg" in fl or "jpg" in fl) and "file" not in fl:
+                try:
+                    data = bytes(mime.data(fmt))
+                    if data.startswith(b"\xff\xd8"):
+                        img_path = self.temp_dir / f"drop_image_{ts}.jpg"
+                        with open(img_path, "wb") as f:
+                            f.write(data)
+                        return str(img_path)
+                except Exception:
+                    pass
+
+        # 6. 搜尋 Windows 原生 DeviceIndependentBitmap (DIB / DIBV5)
+        for fmt in formats:
+            if "deviceindependentbitmap" in fmt.lower():
+                try:
+                    dib_data = bytes(mime.data(fmt))
+                    if dib_data and len(dib_data) >= 40:
+                        img = self._dib_to_qimage(dib_data)
+                        if img and not img.isNull():
+                            img_path = self.temp_dir / f"drop_image_{ts}.png"
+                            if img.save(str(img_path), "PNG"):
+                                return str(img_path)
+                except Exception:
+                    pass
+
+        return ""
+
+    def _extract_image_url_from_html(self, html_text: str, base_url: str = "") -> str:
+        """從 HTML 原始碼中寬容提取圖片 URL 或 Base64 Data URL，並自動結合 base_url 轉為絕對網址"""
+        if not html_text:
+            return ""
+
+        # 嘗試從 HTML 自身解析 <base href="..."> 或 SourceURL
+        if not base_url:
+            base_match = re.search(r'<base\b[^>]*?\bhref=["\']([^"\']+)["\']', html_text, re.IGNORECASE)
+            if base_match:
+                base_url = base_match.group(1).strip()
+            else:
+                source_match = re.search(r'SourceURL:(https?://[^\r\n\s]+)', html_text, re.IGNORECASE)
+                if source_match:
+                    base_url = source_match.group(1).strip()
+
+        patterns = [
+            r'<img\b[^>]*?\bsrc=["\']([^"\']+)["\']',
+            r'<img\b[^>]*?\bdata-src=["\']([^"\']+)["\']',
+            r'<img\b[^>]*?\bdata-original=["\']([^"\']+)["\']',
+            r'<img\b[^>]*?\bsrcset=["\']([^"\'\s,]+)',
+            # 無引號容錯
+            r'<img\b[^>]*?\bsrc=([^\s>]+)',
+            r'<img\b[^>]*?\bdata-src=([^\s>]+)',
+        ]
+        for pat in patterns:
+            for m in re.finditer(pat, html_text, re.IGNORECASE):
+                raw_url = html.unescape(m.group(1).strip())
+                if raw_url.startswith("data:image/gif;base64,R0lGOD") or raw_url.startswith("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB"):
+                    continue
+                if raw_url.startswith("data:image/"):
+                    return raw_url
+                if raw_url.startswith("//"):
+                    return f"https:{raw_url}"
+                if raw_url.startswith("http://") or raw_url.startswith("https://"):
+                    return raw_url
+                if base_url:
+                    try:
+                        return urllib.parse.urljoin(base_url, raw_url)
+                    except Exception:
+                        pass
+                if raw_url.startswith("/"):
+                    return raw_url
+
+        return ""
+
+    def _download_and_add_remote_image(self, url_str: str, referer: str = "") -> bool:
+        """嘗試下載遠端網頁圖片，自動保存為本機實體圖片檔並直接入架"""
+        try:
+            parsed = urllib.parse.urlparse(url_str)
+            origin = f"{parsed.scheme}://{parsed.netloc}/" if parsed.netloc else ""
+            ref = referer or origin
+
+            attempts = [ref, ""] if ref else [""]
+            data = None
+
+            for current_ref in attempts:
+                try:
+                    ssl_ctx = ssl._create_unverified_context()
+                    headers = {
+                        "User-Agent": (
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                        ),
+                        "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+                        "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+                        "Sec-Fetch-Dest": "image",
+                        "Sec-Fetch-Mode": "no-cors",
+                        "Sec-Fetch-Site": "cross-site",
+                    }
+                    if current_ref:
+                        headers["Referer"] = current_ref
+
+                    req = urllib.request.Request(url_str, headers=headers)
+                    with urllib.request.urlopen(req, timeout=3.5, context=ssl_ctx) as resp:
+                        read_bytes = resp.read()
+                        if read_bytes and len(read_bytes) > 0:
+                            data = read_bytes
+                            break
+                except Exception:
+                    continue
+
+            if data and len(data) > 0:
+                ext = ""
+                if data.startswith(b"\x89PNG"):
+                    ext = ".png"
+                elif data.startswith(b"\xff\xd8"):
+                    ext = ".jpg"
+                elif data.startswith(b"GIF8"):
+                    ext = ".gif"
+                elif b"WEBP" in data[:16]:
+                    ext = ".webp"
+                elif data.startswith(b"BM"):
+                    ext = ".bmp"
+                elif data.lstrip().startswith(b"<svg") or data.lstrip().startswith(b"<?xml"):
+                    ext = ".svg"
+                else:
+                    parsed_path = Path(parsed.path)
+                    suffix = parsed_path.suffix.lower()
+                    if suffix in [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".svg", ".ico", ".jfif", ".avif"]:
+                        ext = suffix
+                    else:
+                        test_img = QImage()
+                        if test_img.loadFromData(data):
+                            ext = ".png"
+
+                if ext:
                     ts = int(time.time() * 1000)
-                    parsed_path = Path(QUrl(url_str).path())
-                    ext = parsed_path.suffix.lower()
-                    if ext not in [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"]:
-                        ext = ".png"
                     img_path = self.temp_dir / f"web_image_{ts}{ext}"
                     with open(img_path, "wb") as f:
                         f.write(data)
-                    self.add_file_item(str(img_path))
-                    return True
+
+                    if self.add_file_item(str(img_path)):
+                        self.update_state()
+                        if self.manager:
+                            self.manager.save_session()
+                        self.show_temporary_hint("📥 圖片已成功加入置物架！")
+                        return True
         except Exception:
             pass
+
+        return False
+
+    def _handle_image_drop(self, mime) -> bool:
+        """
+        全方位處理來自任何來源（特別是現代瀏覽器）的圖片拖曳：
+        1. 優先直接從拖曳資料流提取本機二進位點陣圖（FileContents / DIB / PNG / JFIF）
+           → 0 毫秒極速儲存，免網路請求，支援 Blob URL 與防盜鏈
+        2. HTML 內嵌 Base64 圖片 (data:image/...)
+        3. HTML 提取遠端圖片網址並下載實體圖片入架
+        4. URLs / 純文字遠端圖片網址下載
+        """
+        # 1. 優先提取本機二進位點陣圖（Chrome / Edge / Firefox 均會提供）
+        saved_local_img = self._try_extract_binary_image_from_mime(mime)
+        if saved_local_img:
+            if self.add_file_item(saved_local_img):
+                self.update_state()
+                if self.manager:
+                    self.manager.save_session()
+                self.show_temporary_hint("📥 圖片已成功加入置物架！")
+                return True
+
+        # 取得可能的 base_url
+        base_url = ""
+        if mime.hasUrls():
+            for u in mime.urls():
+                if not u.isLocalFile() and u.scheme() in ("http", "https"):
+                    base_url = u.toString()
+                    break
+
+        # 2. HTML 檢查（Base64 或 遠端 URL）
+        if mime.hasHtml():
+            try:
+                html_content = mime.html()
+                img_url = self._extract_image_url_from_html(html_content, base_url=base_url)
+                if img_url:
+                    if img_url.startswith("data:image/"):
+                        if self._save_base64_image(img_url):
+                            return True
+                    elif img_url.startswith("http://") or img_url.startswith("https://"):
+                        if self._download_and_add_remote_image(img_url, referer=base_url):
+                            return True
+            except Exception:
+                pass
+
+        # 3. URLs 檢查（若 URL 是圖片副檔名或包含 Data URL）
+        if mime.hasUrls():
+            found_image = False
+            for url in mime.urls():
+                if not url.isLocalFile():
+                    url_str = url.toString()
+                    if url_str.startswith("data:image/"):
+                        if self._save_base64_image(url_str):
+                            found_image = True
+                    elif self._is_image_url(url_str):
+                        if self._download_and_add_remote_image(url_str, referer=base_url):
+                            found_image = True
+            if found_image:
+                return True
+
+        # 4. 純文字若為 Data URL 或 圖片網址
+        if mime.hasText():
+            text = mime.text().strip()
+            if text.startswith("data:image/"):
+                if self._save_base64_image(text):
+                    return True
+            elif self._is_image_url(text):
+                if self._download_and_add_remote_image(text, referer=base_url):
+                    return True
+
         return False
 
     def dropEvent(self, event):
@@ -931,84 +1315,67 @@ class KyteShelfWidget(QWidget):
             event.ignore()
             return
 
-        mime = event.mimeData()
-        has_handled = False
+        try:
+            mime = event.mimeData()
+            has_handled = False
 
-        # 1. 最優先：檢查本機實體檔案與資料夾 (CF_HDROP / Local File URLs)
-        # Windows 檔案總管拖曳本機檔案時亦會附帶 FileGroupDescriptorW，必須最優先處理實體路徑，避免誤觸剪貼簿或虛擬檔案提取
-        if mime.hasUrls():
-            local_urls = [u for u in mime.urls() if u.isLocalFile()]
-            if local_urls:
-                has_handled = True  # 只要是本機實體檔案，標記已處理，絕對不可降級為虛擬檔案或純文字便箋
-                for url in local_urls:
-                    path = os.path.normpath(url.toLocalFile())
-                    if path and path not in self.file_paths:
-                        self.add_file_item(path)
-                self.update_state()
-                if self.manager:
-                    self.manager.save_session()
-
-        # 2. 次優先：檢查是否為 Outlook 附件或無實體路徑之 Windows 虛擬檔案拖曳
-        # 注意：拖曳事件僅能從 Outlook COM 或當前拖曳的 mime 提取，絕不可讀取系統剪貼簿 (OleGetClipboard)
-        if not has_handled and is_outlook_mime_data(mime):
-            saved = extract_attachments_from_outlook_com(self.temp_dir)
-            if not saved:
-                saved = extract_virtual_files_from_mime(mime, self.temp_dir)
-            if saved:
-                count = 0
-                for p in saved:
-                    if p not in self.file_paths:
-                        if self.add_file_item(p):
-                            count += 1
-                if count > 0:
-                    has_handled = True
+            # 0. 最高絕對優先級：本機實體檔案與資料夾（從檔案總管、桌面拖曳的檔案或資料夾）
+            # 必須最優先處理並直接 return，零延遲，徹底隔絕後續 OLE 格式或網路下載！
+            if mime.hasUrls():
+                local_paths = [os.path.normpath(u.toLocalFile()) for u in mime.urls() if u.isLocalFile()]
+                if local_paths:
+                    for p in local_paths:
+                        if p and p not in self.file_paths:
+                            self.add_file_item(p)
                     self.update_state()
                     if self.manager:
                         self.manager.save_session()
-                    self.show_temporary_hint(f"📥 已從 Outlook 加入 {count} 個附件！")
+                    event.acceptProposedAction()
+                    return
 
-        # 3. 處理直接攜帶圖片點陣圖的拖曳數據（如某些瀏覽器或圖形軟體）
-        if not has_handled and mime.hasImage():
-            image = mime.imageData()
-            if image and isinstance(image, QImage) and not image.isNull():
-                ts = int(time.time() * 1000)
-                img_path = self.temp_dir / f"drop_image_{ts}.png"
-                if image.save(str(img_path), "PNG"):
-                    self.add_file_item(str(img_path))
-                    has_handled = True
+            # 1. 檢查是否為 Outlook 附件
+            if is_outlook_mime_data(mime) and not is_browser_mime_data(mime):
+                try:
+                    formats = [f.lower() for f in mime.formats()]
+                    if any("renprivate" in fmt for fmt in formats):
+                        saved = extract_attachments_from_outlook_com(self.temp_dir)
+                        if saved:
+                            count = 0
+                            for p in saved:
+                                if p not in self.file_paths:
+                                    if self.add_file_item(p):
+                                        count += 1
+                            if count > 0:
+                                has_handled = True
+                                self.update_state()
+                                if self.manager:
+                                    self.manager.save_session()
+                                self.show_temporary_hint(f"📥 已從 Outlook 加入 {count} 個附件！")
+                except Exception:
+                    pass
 
-        # 4. 檢查遠端網址 URLs（HTTP / HTTPS）
-        if not has_handled and mime.hasUrls():
-            for url in mime.urls():
-                if url.scheme() in ["http", "https"]:
-                    url_str = url.toString()
-                    # 判斷是否為網頁圖片 URL，若是則自動下載為實體圖片！
-                    if self._is_image_url(url_str) and self._download_and_add_remote_image(url_str):
-                        has_handled = True
-                    else:
+            # 2. 處理網頁圖片拖曳（DIB 點陣圖、PNG 二進位資料、Base64 或 遠端 URL）
+            if not has_handled:
+                has_handled = self._handle_image_drop(mime)
+
+            # 3. 處理遠端 HTTP/HTTPS 網址便箋
+            if not has_handled and mime.hasUrls():
+                for url in mime.urls():
+                    if url.scheme() in ["http", "https"]:
+                        url_str = url.toString()
                         self.add_sticky_note(url_str, note_type="url")
                         has_handled = True
 
-        # 5. 檢查 HTML 是否包含 <img> 圖片標籤
-        if not has_handled and mime.hasHtml():
-            m = re.search(r'<img[^>]+src=["\'](https?://[^"\']+)["\']', mime.html(), re.IGNORECASE)
-            if m:
-                if self._download_and_add_remote_image(m.group(1)):
+            # 4. 純文字便箋降級處理
+            if not has_handled and mime.hasText():
+                text = mime.text().strip()
+                if text:
+                    self.add_sticky_note(text, note_type="text")
                     has_handled = True
 
-        # 6. 純文字降級處理
-        if not has_handled and mime.hasText():
-            text = mime.text().strip()
-            if self._is_image_url(text) and self._download_and_add_remote_image(text):
-                has_handled = True
-            else:
-                self.add_sticky_note(mime.text(), note_type="text")
-                has_handled = True
-
-        if has_handled and self.manager:
-            self.manager.save_session()
-
-        event.acceptProposedAction()
+            event.acceptProposedAction()
+        except Exception:
+            event.ignore()
 
     def add_sticky_note(self, content: str, note_type: str = "text"):
         """將純文字或網址以自黏標籤形式加入置物架"""
@@ -1221,7 +1588,7 @@ class KyteShelfWidget(QWidget):
 
         # 3. 核心新增：檢查是否為 Outlook 附件或 Windows 虛擬檔案（自 Outlook 附件 Ctrl+C）
         saved_outlook_files = []
-        if is_outlook_mime_data(mime):
+        if is_outlook_mime_data(mime) or sys.platform == "win32":
             saved_outlook_files = extract_virtual_files_from_clipboard(self.temp_dir)
             if not saved_outlook_files:
                 saved_outlook_files = extract_attachments_from_outlook_com(self.temp_dir)
